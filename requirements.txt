@@ -1,0 +1,9 @@
+numpy
+scipy
+pandas
+scikit-learn
+anndata>=0.8
+scanpy
+sparse_dot_mkl
+numba
+tqdm
