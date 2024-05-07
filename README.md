@@ -2,7 +2,7 @@
 
 Self Supervised Tools for Single Cell Data
 
-Molecular Cross-Validation for PCs (arXiv manuscript)[https://www.biorxiv.org/content/10.1101/786269v1]
+Molecular Cross-Validation for PCs [arXiv manuscript](https://www.biorxiv.org/content/10.1101/786269v1)
 
 ```
 mcv(
@@ -20,7 +20,7 @@ mcv(
 )
 ```
 
-Noise2Self for kNN selection (arXiv manuscript)[https://arxiv.org/abs/1901.11365]
+Noise2Self for kNN selection [arXiv manuscript](https://arxiv.org/abs/1901.11365)
 
 ```
 def noise2self(
