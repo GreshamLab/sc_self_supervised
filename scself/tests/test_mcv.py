@@ -4,8 +4,8 @@ import numpy.testing as npt
 import scipy.sparse as sps
 import anndata as ad
 
-from scself import TruncRobustScaler, mcv_pcs
-from scself.mcv.molecular_crossvalidation import mcv_mse
+from scself import TruncRobustScaler, mcv
+from scself._mcv.molecular_crossvalidation import mcv_mse
 from scself.utils.standardization import _normalize_for_pca
 
 from ._stubs import (
@@ -39,7 +39,7 @@ class TestMCV(unittest.TestCase):
         data = sps.csr_matrix(COUNTS)
         self.assertEqual(
             np.argmin(
-                mcv_pcs(data, n=1, n_pcs=5, verbose=True)
+                mcv(data, n=1, n_pcs=5, silent=True)
             ),
             1
         )
@@ -49,12 +49,12 @@ class TestMCV(unittest.TestCase):
 
         self.assertEqual(
             np.argmin(
-                mcv_pcs(
+                mcv(
                     data,
                     n=1,
                     n_pcs=5,
                     standardization_method='log_scale',
-                    verbose=True
+                    silent=True
                 )
             ),
             1

@@ -1,5 +1,8 @@
 __version__ = "0.1.0"
 
-from .mcv.molecular_crossvalidation import mcv_pcs
-from .noise2self.n2s import knn_noise2self
-from .scaling import TruncRobustScaler, TruncStandardScaler
+from ._mcv.molecular_crossvalidation import mcv
+from ._noise2self.n2s import noise2self
+from .scaling import (
+    TruncRobustScaler,
+    TruncStandardScaler
+)

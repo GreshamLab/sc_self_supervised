@@ -15,7 +15,7 @@ from .common import (
 )
 
 
-def knn_noise2self(
+def noise2self(
     count_data,
     neighbors=None,
     npcs=None,
@@ -26,7 +26,8 @@ def knn_noise2self(
     connectivity=False,
     standardization_method='log',
     pc_data=None,
-    chunk_size=10000
+    chunk_size=10000,
+    verbose=None
 ):
     """
     Select an optimal set of graph parameters based on noise2self

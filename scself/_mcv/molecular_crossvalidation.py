@@ -18,7 +18,7 @@ except ImportError:
     from sklearn.decomposition import TruncatedSVD
 
 
-def mcv_pcs(
+def mcv(
     count_data,
     n=1,
     n_pcs=100,
@@ -27,7 +27,8 @@ def mcv_pcs(
     metric='mse',
     standardization_method='log',
     metric_kwargs={},
-    verbose=False,
+    silent=False,
+    verbose=None,
     zero_center=False
 ):
     """
@@ -55,12 +56,20 @@ def mcv_pcs(
 
     metric_arr = np.zeros((n, n_pcs + 1), dtype=float)
 
+    if silent:
+        level = 10
+    else:
+        level = 30
+
     # Use a single progress bar for nested loop
     with tqdm.tqdm(total=n * (n_pcs + 1)) as pbar:
 
         for i in range(n):
 
-            log(f"Iter #{i}: Splitting data {count_data.shape}")
+            log(
+                f"Iter #{i}: Splitting data {count_data.shape}",
+                level=level
+            )
 
             A, B, n_counts = _molecular_split(
                 count_data,
@@ -70,7 +79,8 @@ def mcv_pcs(
 
             log(
                 f"Iter #{i}: Standardizing Train ({standardization_method}) "
-                f"{A.shape}"
+                f"{A.shape}",
+                level=level
             )
 
             A = standardize_data(
@@ -81,7 +91,8 @@ def mcv_pcs(
 
             log(
                 f"Iter #{i}: Standardizing Test ({standardization_method}) "
-                f"{B.shape}"
+                f"{B.shape}",
+                level=level
             )
 
             B = standardize_data(
@@ -99,7 +110,10 @@ def mcv_pcs(
                 )
 
             else:
-                log(f"Iter #{i}: Initial TruncatedSVD PCA ({n_pcs} comps)")
+                log(
+                    f"Iter #{i}: Initial TruncatedSVD PCA ({n_pcs} comps)",
+                    level=level
+                )
 
                 scaler = TruncatedSVD(n_components=n_pcs)
 
@@ -114,7 +128,7 @@ def mcv_pcs(
 
             # Null model (no PCs)
 
-            log(f"Iter #{i}: 0 PCs")
+            log(f"Iter #{i}: 0 PCs", level=10)
 
             if sps.issparse(B.X):
                 metric_arr[i, 0] = np.sum(B.X.data ** 2) / size
@@ -125,7 +139,7 @@ def mcv_pcs(
 
             # Calculate metric for 1-n_pcs number of PCs
             for j in range(1, n_pcs + 1):
-                log(f"Iter #{i}: {j} PCs")
+                log(f"Iter #{i}: {j} PCs", level=10)
                 metric_arr[i, j] = mcv_comp(
                     B.X,
                     A.obsm['X_pca'][:, 0:j],
