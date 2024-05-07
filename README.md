@@ -1,4 +1,4 @@
-# sc_self_supervised
+# scself
 
 Self Supervised Tools for Single Cell Data
 
