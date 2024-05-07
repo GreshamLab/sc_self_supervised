@@ -6,3 +6,7 @@ from .scaling import (
     TruncRobustScaler,
     TruncStandardScaler
 )
+from .utils.dot_product import (
+    dot,
+    sparse_dot_patch
+)
