@@ -5,7 +5,8 @@ import scipy.sparse as sps
 import anndata as ad
 
 from scself import TruncRobustScaler, mcv
-from scself._mcv.molecular_crossvalidation import mcv_mse
+from scself._mcv.common import mcv_comp
+from scself.utils import mcv_mse
 from scself.utils.standardization import _normalize_for_pca
 
 from ._stubs import (
@@ -63,19 +64,46 @@ class TestMCV(unittest.TestCase):
 
 class TestMCVMetrics(unittest.TestCase):
 
+    def setUp(self):
+        self.data = sps.csr_matrix(COUNTS)
+
     def testMSErow(self):
-        data = sps.csr_matrix(COUNTS)
 
         mse = mcv_mse(
-            data,
-            data @ np.zeros((10, 10)),
-            np.eye(10),
-            by_row=True
+            self.data,
+            self.data @ np.zeros((10, 10)),
+            np.eye(10)
         )
 
         npt.assert_almost_equal(
-            data.power(2).sum(axis=1).A1 / 10,
+            self.data.power(2).sum(axis=1).A1 / 10,
             mse
+        )
+
+    def testMSER2row(self):
+
+        mse, r2 = mcv_comp(
+            self.data,
+            self.data @ np.zeros((10, 10)),
+            np.eye(10),
+            'mse',
+            axis=1,
+            calculate_r2=True
+        )
+
+        calc_mse = self.data.power(2).sum(axis=1).A1
+
+        npt.assert_almost_equal(
+            calc_mse / 10,
+            mse
+        )
+
+        calc_r2 = calc_mse / self.data.power(2).sum(axis=1).A1
+        calc_r2 = 1 - calc_r2
+
+        npt.assert_almost_equal(
+            r2,
+            calc_r2
         )
 
 

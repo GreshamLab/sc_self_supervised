@@ -45,7 +45,7 @@ class TestMSENumba(unittest.TestCase):
     def test_mse_rowwise(self):
 
         npt.assert_array_almost_equal(
-            mcv_mse(self.X, self.PC, self.ROTATION),
+            mcv_mse(self.X, self.PC, self.ROTATION, axis=None),
             self.Z
         )
 
@@ -57,7 +57,7 @@ class TestMSENumba(unittest.TestCase):
         )
 
         npt.assert_array_almost_equal(
-            mcv_mse(sps.csr_array(self.X), self.PC, self.ROTATION),
+            mcv_mse(sps.csr_array(self.X), self.PC, self.ROTATION, axis=None),
             self.Z
         )
 
@@ -82,23 +82,23 @@ class TestMSE(unittest.TestCase):
     def test_dense_dense(self):
 
         npt.assert_array_almost_equal(
-            pairwise_metric(self.X, self.Y, metric=self.metric),
+            pairwise_metric(self.X, self.Y, axis=None, metric=self.metric),
             self.Z
         )
 
         npt.assert_array_almost_equal(
-            pairwise_metric(self.X, self.Y, by_row=True, metric=self.metric),
+            pairwise_metric(self.X, self.Y, metric=self.metric),
             self.Z_row
         )
 
         with self.none_context:
             npt.assert_array_almost_equal(
-                pairwise_metric(self.X, None, metric=self.metric),
+                pairwise_metric(self.X, None, axis=None, metric=self.metric),
                 self.Z_noY
             )
 
             npt.assert_array_almost_equal(
-                pairwise_metric(self.X, None, by_row=True, metric=self.metric),
+                pairwise_metric(self.X, None, metric=self.metric),
                 self.Z_noY_row
             )
 
@@ -107,23 +107,23 @@ class TestMSE(unittest.TestCase):
         X = sps.csr_matrix(self.X)
 
         npt.assert_array_almost_equal(
-            pairwise_metric(X, self.Y, metric=self.metric),
+            pairwise_metric(X, self.Y, axis=None, metric=self.metric),
             self.Z
         )
 
         npt.assert_array_almost_equal(
-            pairwise_metric(X, self.Y, by_row=True, metric=self.metric),
+            pairwise_metric(X, self.Y, metric=self.metric),
             self.Z_row
         )
 
         with self.none_context:
             npt.assert_array_almost_equal(
-                pairwise_metric(X, None, metric=self.metric),
+                pairwise_metric(X, None, axis=None, metric=self.metric),
                 self.Z_noY
             )
 
             npt.assert_array_almost_equal(
-                pairwise_metric(X, None, by_row=True, metric=self.metric),
+                pairwise_metric(X, None, metric=self.metric),
                 self.Z_noY_row
             )
 
@@ -133,12 +133,12 @@ class TestMSE(unittest.TestCase):
         Y = sps.csr_matrix(self.Y)
 
         npt.assert_array_almost_equal(
-            pairwise_metric(X, Y, metric=self.metric),
+            pairwise_metric(X, Y, axis=None, metric=self.metric),
             self.Z
         )
 
         npt.assert_array_almost_equal(
-            pairwise_metric(X, Y, by_row=True, metric=self.metric),
+            pairwise_metric(X, Y, metric=self.metric),
             self.Z_row
         )
 

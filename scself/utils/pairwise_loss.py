@@ -67,7 +67,6 @@ def pairwise_metric(
     x,
     y,
     metric='mse',
-    by_row=False,
     axis=1,
     **kwargs
 ):
@@ -80,8 +79,6 @@ def pairwise_metric(
     :type y: _type_
     :param metric: _description_, defaults to 'mse'
     :type metric: str, optional
-    :param by_row: _description_, defaults to False
-    :type by_row: bool, optional
     :return: _description_
     :rtype: _type_
     """
@@ -105,13 +102,11 @@ def pairwise_metric(
     except AttributeError:
         pass
 
-    loss = loss / x.shape[axis]
-
-    if by_row:
-        return loss
-
+    if axis is not None:
+        return loss / x.shape[axis]
     else:
-        return loss.sum() / loss.size
+        _size = x.shape[0] * x.shape[1]
+        return loss / _size
 
 
 def variance(
@@ -211,7 +206,6 @@ def mcv_mse(
     x,
     pc,
     rotation,
-    by_row=False,
     axis=1,
     **metric_kwargs
 ):
@@ -224,7 +218,6 @@ def mcv_mse(
             x,
             pc,
             rotation,
-            by_row=by_row,
             axis=axis,
             **metric_kwargs
         )
@@ -235,7 +228,6 @@ def mcv_mse(
             x,
             pc @ rotation,
             metric='mse',
-            by_row=by_row,
             axis=axis,
             **metric_kwargs
         )

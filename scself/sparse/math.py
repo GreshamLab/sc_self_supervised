@@ -15,7 +15,6 @@ def mcv_mse_sparse(
     x,
     pc,
     rotation,
-    by_row=False,
     axis=1,
     **metric_kwargs
 ):
@@ -24,6 +23,8 @@ def mcv_mse_sparse(
         func = _mse_rowwise
     elif axis == 0:
         func = _mse_columnwise
+    elif axis is None:
+        func = _mse_rowwise
     else:
         raise ValueError
 
@@ -36,11 +37,10 @@ def mcv_mse_sparse(
         x.shape[1]
     )
 
-    if by_row:
-        return y
+    if axis is None:
+        y = y.mean()
 
-    else:
-        return np.mean(y)
+    return y
 
 
 def sparse_sum(sparse_array, axis=None, squared=False):

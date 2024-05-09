@@ -1,8 +1,7 @@
 import numpy as np
 import tqdm
 
-
-from scself.utils import log
+from scself.utils import log, pca
 from .graph import (
     neighbor_graph,
     local_optimal_knn
@@ -10,8 +9,7 @@ from .graph import (
 from .common import (
     _check_args,
     _standardize,
-    _search_k,
-    _get_pcs
+    _search_k
 )
 
 
@@ -92,7 +90,7 @@ def noise2self(
         data_obj.obsm['X_pca'] = pc_data
 
     else:
-        _get_pcs(data_obj, expr_data, np.max(npcs))
+        data_obj.obsm['X_pca'] = pca(expr_data, np.max(npcs))
 
     mses = np.zeros((len(npcs), len(neighbors)))
 

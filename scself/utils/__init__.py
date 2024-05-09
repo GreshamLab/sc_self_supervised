@@ -11,3 +11,4 @@ from .pairwise_loss import (
     coefficient_of_variation,
     variance
 )
+from ._pca import pca

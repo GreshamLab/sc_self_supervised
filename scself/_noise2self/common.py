@@ -1,13 +1,11 @@
 import numpy as np
 import scipy.sparse as sps
 import anndata as ad
-import scanpy as sc
 
 from scself.utils import (
     dot,
     standardize_data,
     pairwise_metric,
-    log,
     sparse_dot_patch
 )
 from scself.sparse import is_csr
@@ -121,19 +119,18 @@ def _noise_to_self_error(
                 _end
             )
 
-        if by_row:
-            return _row_mse
-        else:
-            return np.mean(_row_mse)
-
     else:
-        return pairwise_metric(
+        _row_mse = pairwise_metric(
             X,
             dot(k_graph, X, dense=not sps.issparse(X)),
-            by_row=by_row,
             metric=metric,
             **loss_kwargs
         )
+
+    if by_row:
+        return _row_mse
+    else:
+        return np.mean(_row_mse)
 
 
 def _check_args(
@@ -220,15 +217,3 @@ def _standardize(count_data, standardization_method):
         sparse_dot_patch(expr_data)
 
     return data_obj, expr_data
-
-
-def _get_pcs(data_obj, expr_data, n_pcs):
-
-    if sps.issparse(expr_data):
-        sparse_dot_patch(expr_data)
-
-    log(f"Calculating {n_pcs} PCs")
-    data_obj.obsm['X_pca'] = sc.pp.pca(
-        expr_data,
-        n_comps=n_pcs
-    )
