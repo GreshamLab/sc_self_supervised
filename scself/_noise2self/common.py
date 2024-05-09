@@ -1,17 +1,19 @@
 import numpy as np
 import scipy.sparse as sps
 import anndata as ad
-import tqdm
+import scanpy as sc
 
 from scself.utils import (
     dot,
     standardize_data,
-    pairwise_metric
+    pairwise_metric,
+    log,
+    sparse_dot_patch
 )
 from scself.sparse import is_csr
-from scself.utils.dot_product import sparse_dot_patch
 from .graph import (
     local_optimal_knn,
+    combine_row_stochastic_graphs,
     _connect_to_row_stochastic,
     _dist_to_row_stochastic
 )
@@ -22,13 +24,11 @@ N_NEIGHBORS = np.arange(15, 115, 10)
 
 def _search_k(
     X,
-    graph,
+    graphs,
     k,
     by_row=False,
     loss='mse',
     loss_kwargs={},
-    X_compare=None,
-    pbar=False,
     connectivity=False,
     chunk_size=10000
 ):
@@ -54,37 +54,32 @@ def _search_k(
     n, _ = X.shape
     n_k = len(k)
 
-    X_compare = X_compare if X_compare is not None else X
-
     mses = np.zeros(n_k) if not by_row else np.zeros((n_k, n))
-
-    rfunc = tqdm.trange if pbar is True else range
-
-    if hasattr(pbar, 'postfix'):
-        _postfix = pbar.postfix
-    else:
-        _postfix = None
 
     if connectivity:
         row_normalize = _connect_to_row_stochastic
     else:
         row_normalize = _dist_to_row_stochastic
 
-    for i in rfunc(n_k):
+    for i in range(n_k):
 
-        if _postfix is not None:
-            pbar.postfix = _postfix + f" ({k[i]} N)"
-            pbar.update(1)
+        k_graph = [
+            # Convert to a row stochastic graph
+            row_normalize(
+                # Extract k non-zero neighbors from the graph
+                local_optimal_knn(
+                    graph.copy(),
+                    np.full(n, k[i]),
+                    keep='smallest'
+                )
+            )
+            for graph in graphs
+        ]
 
-        # Extract k non-zero neighbors from the graph
-        k_graph = local_optimal_knn(
-            graph.copy(),
-            np.full(n, k[i]),
-            keep='smallest'
-        )
-
-        # Convert to a row stochastic graph
-        k_graph = row_normalize(k_graph)
+        if len(k_graph) == 1:
+            k_graph = k_graph[0]
+        else:
+            k_graph = combine_row_stochastic_graphs(k_graph)
 
         # Calculate mean squared error
         mses[i] = _noise_to_self_error(
@@ -144,8 +139,8 @@ def _noise_to_self_error(
 def _check_args(
     neighbors,
     npcs,
-    count_data,
-    pc_data
+    count_data=None,
+    pc_data=None
 ):
 
     # Get default search parameters and check dtypes
@@ -159,8 +154,6 @@ def _check_args(
     else:
         npcs = np.asanyarray(npcs).reshape(-1)
 
-    _max_pcs = np.max(npcs)
-
     if not np.issubdtype(neighbors.dtype, np.integer):
         raise ValueError(
             "k-NN graph requires k to be integers; "
@@ -172,6 +165,19 @@ def _check_args(
             "n_pcs must be integers; "
             f"{npcs.dtype} provided"
         )
+
+    _check_input_data(npcs, count_data, pc_data)
+
+    return neighbors, npcs
+
+
+def _check_input_data(
+    npcs,
+    count_data,
+    pc_data
+):
+
+    _max_pcs = np.max(npcs)
 
     # Check input data sizes
     if pc_data is not None and pc_data.shape[1] < _max_pcs:
@@ -185,12 +191,18 @@ def _check_args(
             f"data {count_data.shape} provided"
         )
 
-    return neighbors, npcs
+    if count_data is not None and pc_data is not None:
+        if count_data.shape[0] != pc_data.shape[0]:
+            raise ValueError(
+                f"Count data {count_data.shape} observations "
+                f"do not match PC {pc_data.shape} observations"
+            )
 
 
 def _standardize(count_data, standardization_method):
     # Standardize data if necessary and create an anndata object
     # Keep separate reference to expression data and force float32
+    # This way if the expression data is provided it isnt copied
     if standardization_method is not None:
         data_obj = standardize_data(
             ad.AnnData(count_data.astype(np.float32)),
@@ -208,3 +220,15 @@ def _standardize(count_data, standardization_method):
         sparse_dot_patch(expr_data)
 
     return data_obj, expr_data
+
+
+def _get_pcs(data_obj, expr_data, n_pcs):
+
+    if sps.issparse(expr_data):
+        sparse_dot_patch(expr_data)
+
+    log(f"Calculating {n_pcs} PCs")
+    data_obj.obsm['X_pca'] = sc.pp.pca(
+        expr_data,
+        n_comps=n_pcs
+    )

@@ -1,3 +1,4 @@
+import functools
 import numpy as np
 import scipy.sparse as sps
 
@@ -90,6 +91,13 @@ def local_optimal_knn(
         neighbor_graph[i, droppers] = 0.
 
     return neighbor_graph
+
+
+def combine_row_stochastic_graphs(graphs):
+    graph = functools.reduce(lambda x, y: x + y, graphs)
+    graph.data /= len(graphs)
+
+    return graph
 
 
 def set_diag(X, diag):

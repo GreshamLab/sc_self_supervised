@@ -145,7 +145,7 @@ class TestKNNSearch(unittest.TestCase):
 
         mse = _search_k(
             self.data,
-            self.dist,
+            (self.dist, ),
             np.arange(1, 7),
             loss=self.loss
         )
@@ -161,9 +161,8 @@ class TestKNNSearch(unittest.TestCase):
 
         mse = _search_k(
             sps.csr_matrix(self.data),
-            self.dist,
+            (self.dist, ),
             np.arange(1, 7),
-            X_compare=self.data,
             loss=self.loss
         )
 

@@ -1,5 +1,4 @@
 import numpy as np
-import scanpy as sc
 import tqdm
 
 
@@ -11,7 +10,8 @@ from .graph import (
 from .common import (
     _check_args,
     _standardize,
-    _search_k
+    _search_k,
+    _get_pcs
 )
 
 
@@ -92,28 +92,16 @@ def noise2self(
         data_obj.obsm['X_pca'] = pc_data
 
     else:
-        log(f"Calculating {np.max(npcs)} PCs")
-        data_obj.obsm['X_pca'] = sc.pp.pca(
-            expr_data,
-            n_comps=np.max(npcs),
-            zero_center=False
-        )
+        _get_pcs(data_obj, expr_data, np.max(npcs))
 
     mses = np.zeros((len(npcs), len(neighbors)))
 
     if len(npcs) > 1:
-        # Create a progress bar
-        tqdm_pbar = tqdm.tqdm(
-            enumerate(npcs),
-            postfix=f"{npcs[0]} PCs",
-            bar_format='{l_bar}{bar}{r_bar}',
-            total=len(npcs) * len(neighbors)
-        )
 
         # Search for the smallest MSE for each n_pcs / k combination
         # Outer loop does PCs, because the distance graph has to be
         # recalculated when PCs changes
-        for i, pc in tqdm_pbar:
+        for i, pc in tqdm.tqdm(enumerate(npcs)):
 
             # Calculate neighbor graph with the max number of neighbors
             # Faster to select only a subset of edges than to recalculate
@@ -125,20 +113,15 @@ def noise2self(
                 metric=metric
             )
 
-            # Update the progress bar
-            tqdm_pbar.postfix = f"{pc} PCs Neighbor Search"
-            tqdm_pbar.update(0)
-
             # Search through the neighbors space
             mses[i, :] = _search_k(
                 expr_data,
-                data_obj.obsp['distances'],
+                (data_obj.obsp['distances'], ),
                 neighbors,
                 connectivity=connectivity,
                 loss=loss,
                 loss_kwargs=loss_kwargs,
-                chunk_size=chunk_size,
-                pbar=tqdm_pbar
+                chunk_size=chunk_size
             )
 
         # Get the index of the optimal PCs and k based on
@@ -177,10 +160,9 @@ def noise2self(
     local_k = local_neighbors[np.argmin(
         _search_k(
             expr_data,
-            data_obj.obsp['distances'],
+            (data_obj.obsp['distances'], ),
             local_neighbors,
             by_row=True,
-            pbar=True,
             connectivity=connectivity,
             loss=loss,
             loss_kwargs=loss_kwargs,
