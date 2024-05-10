@@ -1,7 +1,6 @@
 import tqdm
 import numpy as np
 import scipy.sparse as sps
-import scanpy as sc
 
 from scself.utils import (
     standardize_data,
@@ -12,8 +11,6 @@ from .common import (
     mcv_comp,
     molecular_split
 )
-
-
 
 
 def mcv(
@@ -60,71 +57,66 @@ def mcv(
         level = 30
 
     # Use a single progress bar for nested loop
-    with tqdm.tqdm(total=n * (n_pcs + 1)) as pbar:
+    for i in range(n):
 
-        for i in range(n):
+        log(
+            f"Iter #{i}: Splitting data {count_data.shape}",
+            level=level
+        )
 
-            log(
-                f"Iter #{i}: Splitting data {count_data.shape}",
-                level=level
+        A, B, n_counts = molecular_split(
+            count_data,
+            random_seed=random_seed,
+            p=p
+        )
+
+        log(
+            f"Iter #{i}: Standardizing Train ({standardization_method}) "
+            f"{A.shape}",
+            level=level
+        )
+
+        A = standardize_data(
+            A,
+            target_sum=n_counts,
+            method=standardization_method
+        )
+
+        log(
+            f"Iter #{i}: Standardizing Test ({standardization_method}) "
+            f"{B.shape}",
+            level=level
+        )
+
+        B = standardize_data(
+            B,
+            target_sum=n_counts,
+            method=standardization_method
+        )
+
+        # Calculate PCA
+        log(f"Iter #{i}: Initial PCA ({n_pcs} comps)")
+        pca(A, n_pcs, zero_center=zero_center)
+
+        # Null model (no PCs)
+
+        log(f"Iter #{i}: 0 PCs", level=10)
+
+        if sps.issparse(B.X):
+            metric_arr[i, 0] = np.sum(B.X.data ** 2) / size
+        else:
+            metric_arr[i, 0] = np.sum(B.X ** 2) / size
+
+        # Calculate metric for 1-n_pcs number of PCs
+        for j in tqdm.trange(1, n_pcs + 1):
+            log(f"Iter #{i}: {j} PCs", level=10)
+            metric_arr[i, j] = mcv_comp(
+                B.X,
+                A.obsm['X_pca'][:, 0:j],
+                A.varm['PCs'][:, 0:j].T,
+                metric=metric,
+                axis=None,
+                **metric_kwargs
             )
-
-            A, B, n_counts = molecular_split(
-                count_data,
-                random_seed=random_seed,
-                p=p
-            )
-
-            log(
-                f"Iter #{i}: Standardizing Train ({standardization_method}) "
-                f"{A.shape}",
-                level=level
-            )
-
-            A = standardize_data(
-                A,
-                target_sum=n_counts,
-                method=standardization_method
-            )
-
-            log(
-                f"Iter #{i}: Standardizing Test ({standardization_method}) "
-                f"{B.shape}",
-                level=level
-            )
-
-            B = standardize_data(
-                B,
-                target_sum=n_counts,
-                method=standardization_method
-            )
-
-            # Calculate PCA
-            log(f"Iter #{i}: Initial PCA ({n_pcs} comps)")
-            pca(A, n_pcs, zero_center=zero_center)
-
-            # Null model (no PCs)
-
-            log(f"Iter #{i}: 0 PCs", level=10)
-
-            if sps.issparse(B.X):
-                metric_arr[i, 0] = np.sum(B.X.data ** 2) / size
-            else:
-                metric_arr[i, 0] = np.sum(B.X ** 2) / size
-
-            pbar.update(1)
-
-            # Calculate metric for 1-n_pcs number of PCs
-            for j in range(1, n_pcs + 1):
-                log(f"Iter #{i}: {j} PCs", level=10)
-                metric_arr[i, j] = mcv_comp(
-                    B.X,
-                    A.obsm['X_pca'][:, 0:j],
-                    A.varm['PCs'][:, 0:j].T,
-                    metric=metric,
-                    axis=None,
-                    **metric_kwargs
-                )
-                pbar.update(1)
 
     return metric_arr

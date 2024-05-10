@@ -79,6 +79,11 @@ def standardize_data(
             log=True,
             scale=True
         )
+    elif method == 'depth':
+        return _normalize_for_pca(
+            count_data,
+            target_sum
+        )
     elif method is None:
         return count_data
     else:
