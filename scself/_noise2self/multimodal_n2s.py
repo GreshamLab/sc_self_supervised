@@ -1,9 +1,8 @@
 import numpy as np
-import scanpy as sc
 import tqdm
 
 
-from scself.utils import log
+from scself.utils import log, pca
 from .graph import (
     neighbor_graph,
     local_optimal_knn
@@ -12,8 +11,7 @@ from .common import (
     _check_args,
     _check_input_data,
     _standardize,
-    _search_k,
-    _get_pcs
+    _search_k
 )
 
 
@@ -118,7 +116,7 @@ def multimodal_noise2self(
             data_obj[i].obsm['X_pca'] = pc_data[i]
 
         else:
-            _get_pcs(data_obj[i], expr_data[i], np.max(npcs))
+            pca(data_obj[i], expr_data[i], np.max(npcs))
 
     mses = np.zeros((len(npcs), len(neighbors)))
 

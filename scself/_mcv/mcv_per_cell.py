@@ -12,7 +12,7 @@ from .common import (
 )
 
 
-def mcv_r2(
+def mcv_r2_per_cell(
     count_data,
     n=5,
     n_pcs=100,
@@ -107,4 +107,4 @@ def mcv_r2(
             calculate_r2=True,
         )
 
-    return metric_arr
+    return metric_arr, r2_arr
