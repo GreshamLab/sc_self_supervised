@@ -88,6 +88,6 @@ def standardize_data(
         return count_data
     else:
         raise ValueError(
-            f'method must be None, `log`, `scale`, or `log_scale`, '
+            'method must be None, `depth`, `log`, `scale`, or `log_scale`, '
             f'{method} provided'
         )
