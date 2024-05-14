@@ -4,7 +4,7 @@ import anndata as ad
 
 from scself.utils import (
     pairwise_metric,
-    mcv_mse,
+    mcv_mean_error,
     array_sum
 )
 
@@ -87,7 +87,25 @@ def mcv_comp(
     **metric_kwargs
 ):
 
-    if metric != 'mse':
+    if metric == 'mse':
+        metric_arr = mcv_mean_error(
+            x,
+            pc,
+            rotation,
+            axis=axis,
+            squared=True,
+            **metric_kwargs
+        )
+    elif metric == 'mae':
+        metric_arr = mcv_mean_error(
+            x,
+            pc,
+            rotation,
+            axis=axis,
+            squared=False,
+            **metric_kwargs
+        )
+    else:
         metric_arr = pairwise_metric(
             x,
             pc @ rotation,
@@ -95,27 +113,19 @@ def mcv_comp(
             axis=axis,
             **metric_kwargs
         )
-    else:
-        metric_arr = mcv_mse(
-            x,
-            pc,
-            rotation,
-            axis=axis,
-            **metric_kwargs
-        )
 
     if calculate_r2:
         if tss is None:
             tss = array_sum(x, axis=axis, squared=True)
-
-        tss = tss / x.shape[axis]
+            tss = tss / x.shape[axis]
 
         if metric != 'mse':
-            r2_array = mcv_mse(
+            r2_array = mcv_mean_error(
                 x,
                 pc,
                 rotation,
-                axis=axis
+                axis=axis,
+                squared=True
             )
         else:
             r2_array = metric_arr.copy()

@@ -7,7 +7,7 @@ from .standardization import standardize_data
 from .sum import array_sum
 from .pairwise_loss import (
     pairwise_metric,
-    mcv_mse,
+    mcv_mean_error,
     coefficient_of_variation,
     variance
 )

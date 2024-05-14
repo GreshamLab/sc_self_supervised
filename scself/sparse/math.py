@@ -11,20 +11,41 @@ def is_csc(x):
     return sps.isspmatrix_csc(x) or isinstance(x, sps.csc_array)
 
 
-def mcv_mse_sparse(
+def mcv_mean_error_sparse(
     x,
     pc,
     rotation,
     axis=1,
+    squared=False,
     **metric_kwargs
 ):
+    """
+    Wrapper for numba sparse mean error that calculates projection row-wise
+    to minimize memory footprint
+
+    :param x: Sparse data
+    :type x: sp.sparse.spmatrix, sp.sparse.sparray
+    :param pc: Principal component array
+    :type pc: np.ndarray
+    :param rotation: PCA rotation array
+    :type rotation: np.ndarray
+    :param axis: Aggregation axis, defaults to 1 (row).
+        None is flattened.
+    :type axis: int, optional
+    :param squared: Calculate mean squared error.
+        False is mean absolute error, defaults to False.
+    :type squared: bool, optional
+    :raises ValueError: Incorrect axis argument
+    :return: Mean error over axis (or scaler if flattened)
+    :rtype: np.ndarray, float
+    """
 
     if axis == 1:
-        func = _mse_rowwise
+        func = _mean_error_rowwise
     elif axis == 0:
-        func = _mse_columnwise
+        func = _mean_error_columnwise
     elif axis is None:
-        func = _mse_rowwise
+        func = _mean_error_rowwise
     else:
         raise ValueError
 
@@ -34,7 +55,8 @@ def mcv_mse_sparse(
         x.indptr,
         np.ascontiguousarray(pc),
         np.ascontiguousarray(rotation, dtype=pc.dtype),
-        x.shape[1]
+        x.shape[1],
+        squared
     )
 
     if axis is None:
@@ -153,13 +175,14 @@ def sparse_csr_extract_columns(
 
 
 @numba.njit(parallel=False)
-def _mse_rowwise(
+def _mean_error_rowwise(
     a_data,
     a_indices,
     a_indptr,
     b_pcs,
     b_rotation,
-    n_cols
+    n_cols,
+    squared
 ):
 
     n_row = b_pcs.shape[0]
@@ -178,19 +201,23 @@ def _mse_rowwise(
         else:
             row[_idx_a] -= a_data[a_indptr[i]:a_indptr[i + 1]]
 
-        output[i] = np.mean(row ** 2)
+        if squared:
+            output[i] = np.mean(row ** 2)
+        else:
+            output[i] = np.mean(np.abs(row))
 
     return output
 
 
 @numba.njit(parallel=False)
-def _mse_columnwise(
+def _mean_error_columnwise(
     a_data,
     a_indices,
     a_indptr,
     b_pcs,
     b_rotation,
-    n_cols
+    n_cols,
+    squared
 ):
 
     n_row = b_pcs.shape[0]
@@ -208,7 +235,10 @@ def _mse_columnwise(
         else:
             row[_idx_a] -= a_data[a_indptr[i]:a_indptr[i + 1]]
 
-        output += row ** 2
+        if squared:
+            output += row ** 2
+        else:
+            output += np.abs(row)
 
     return output / n_row
 

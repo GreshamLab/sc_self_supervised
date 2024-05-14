@@ -9,7 +9,7 @@ from scself.utils import (
     variance,
     coefficient_of_variation,
     pairwise_metric,
-    mcv_mse
+    mcv_mean_error
 )
 
 N = 1000
@@ -38,27 +38,80 @@ class TestMSENumba(unittest.TestCase):
         cls.ROTATION = rng.random((10, 20))
         cls.Y = cls.PC @ cls.ROTATION
         cls.Z = np.mean((cls.X - cls.Y) ** 2)
+        cls.MAE = np.mean(np.abs(cls.X - cls.Y))
         cls.Z_row = np.mean((cls.X - cls.Y) ** 2, axis=1)
+        cls.MAE_row = np.mean(np.abs(cls.X - cls.Y), axis=1)
         cls.Z_noY = np.mean(cls.X ** 2)
         cls.Z_noY_row = np.mean(cls.X ** 2, axis=1)
 
     def test_mse_rowwise(self):
 
         npt.assert_array_almost_equal(
-            mcv_mse(self.X, self.PC, self.ROTATION, axis=None),
+            mcv_mean_error(
+                self.X,
+                self.PC,
+                self.ROTATION,
+                axis=None,
+                squared=True
+            ),
             self.Z
         )
 
         npt.assert_array_almost_equal(
-            mcv_mse(
-                sps.csr_array(self.X), self.PC, self.ROTATION, by_row=True
+            mcv_mean_error(
+                sps.csr_array(self.X),
+                self.PC,
+                self.ROTATION,
+                by_row=True,
+                squared=True
             ),
             self.Z_row
         )
 
         npt.assert_array_almost_equal(
-            mcv_mse(sps.csr_array(self.X), self.PC, self.ROTATION, axis=None),
+            mcv_mean_error(
+                sps.csr_array(self.X),
+                self.PC,
+                self.ROTATION,
+                axis=None,
+                squared=True
+            ),
             self.Z
+        )
+
+    def test_mae_rowwise(self):
+
+        npt.assert_array_almost_equal(
+            mcv_mean_error(
+                self.X,
+                self.PC,
+                self.ROTATION,
+                axis=None,
+                squared=False
+            ),
+            self.MAE
+        )
+
+        npt.assert_array_almost_equal(
+            mcv_mean_error(
+                sps.csr_array(self.X),
+                self.PC,
+                self.ROTATION,
+                by_row=True,
+                squared=False
+            ),
+            self.MAE_row
+        )
+
+        npt.assert_array_almost_equal(
+            mcv_mean_error(
+                sps.csr_array(self.X),
+                self.PC,
+                self.ROTATION,
+                axis=None,
+                squared=False
+            ),
+            self.MAE
         )
 
 
@@ -155,10 +208,10 @@ class TestMAE(TestMSE):
         cls.X = rng.random((100, 20))
         cls.Y = rng.random((100, 20))
 
-        cls.Z = np.mean((cls.X - cls.Y))
-        cls.Z_row = np.mean((cls.X - cls.Y), axis=1)
-        cls.Z_noY = np.mean(cls.X)
-        cls.Z_noY_row = np.mean(cls.X, axis=1)
+        cls.Z = np.mean(np.abs(cls.X - cls.Y))
+        cls.Z_row = np.mean(np.abs(cls.X - cls.Y), axis=1)
+        cls.Z_noY = np.mean(np.abs(cls.X))
+        cls.Z_noY_row = np.mean(np.abs(cls.X), axis=1)
 
 
 class TestLogLoss(TestMSE):

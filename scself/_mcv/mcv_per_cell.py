@@ -1,4 +1,3 @@
-import tqdm
 import numpy as np
 
 from scself.utils import (
@@ -53,7 +52,7 @@ def mcv_r2_per_cell(
     else:
         level = 30
 
-    for i in tqdm.trange(n):
+    for i in range(n):
 
         log(
             f"Iter #{i}: Splitting data {count_data.shape}",
@@ -91,12 +90,12 @@ def mcv_r2_per_cell(
         )
 
         # Calculate PCA
-        log(f"Iter #{i}: Initial PCA ({n_pcs} comps)")
+        log(f"Iter #{i}: Initial PCA ({n_pcs} comps)", level=level)
         pca(A, n_pcs, zero_center=zero_center)
 
         # Null model (no PCs)
 
-        log(f"Iter #{i}: 0 PCs", level=10)
+        log(f"Iter #{i}: Calculating Metrics", level=level)
 
         metric_arr[:, i], r2_arr[:, i] = mcv_comp(
             B.X,

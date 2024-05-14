@@ -60,6 +60,8 @@ def _mae(x, y, axis=1):
     else:
         ssr = x
 
+    ssr = np.abs(ssr)
+
     return ssr.sum(axis=axis)
 
 
@@ -202,23 +204,25 @@ def coefficient_of_variation(
     )
 
 
-def mcv_mse(
+def mcv_mean_error(
     x,
     pc,
     rotation,
     axis=1,
+    squared=True,
     **metric_kwargs
 ):
 
     if sps.issparse(x):
 
-        from ..sparse.math import mcv_mse_sparse
+        from ..sparse.math import mcv_mean_error_sparse
 
-        return mcv_mse_sparse(
+        return mcv_mean_error_sparse(
             x,
             pc,
             rotation,
             axis=axis,
+            squared=squared,
             **metric_kwargs
         )
 
@@ -227,7 +231,7 @@ def mcv_mse(
         return pairwise_metric(
             x,
             pc @ rotation,
-            metric='mse',
+            metric='mse' if squared else 'mae',
             axis=axis,
             **metric_kwargs
         )

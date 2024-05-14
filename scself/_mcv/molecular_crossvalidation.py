@@ -116,6 +116,7 @@ def mcv(
                 A.varm['PCs'][:, 0:j].T,
                 metric=metric,
                 axis=None,
+                tss=metric_arr[i, 0],
                 **metric_kwargs
             )
 

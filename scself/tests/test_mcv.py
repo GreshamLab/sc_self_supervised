@@ -6,7 +6,7 @@ import anndata as ad
 
 from scself import TruncRobustScaler, mcv
 from scself._mcv.common import mcv_comp
-from scself.utils import mcv_mse
+from scself.utils import mcv_mean_error
 from scself.utils.standardization import _normalize_for_pca
 
 from ._stubs import (
@@ -69,10 +69,11 @@ class TestMCVMetrics(unittest.TestCase):
 
     def testMSErow(self):
 
-        mse = mcv_mse(
+        mse = mcv_mean_error(
             self.data,
             self.data @ np.zeros((10, 10)),
-            np.eye(10)
+            np.eye(10),
+            squared=True
         )
 
         npt.assert_almost_equal(
