@@ -13,7 +13,8 @@ from .graph import (
     local_optimal_knn,
     combine_row_stochastic_graphs,
     _connect_to_row_stochastic,
-    _dist_to_row_stochastic
+    _dist_to_row_stochastic,
+    _invert_distance_graph
 )
 
 N_PCS = np.arange(5, 115, 10)
@@ -57,7 +58,10 @@ def _search_k(
     if connectivity:
         row_normalize = _connect_to_row_stochastic
     else:
-        row_normalize = _dist_to_row_stochastic
+        def row_normalize(x):
+            return _dist_to_row_stochastic(
+                _invert_distance_graph(x)
+            )
 
     for i in range(n_k):
 

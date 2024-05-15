@@ -95,7 +95,17 @@ def local_optimal_knn(
 
 def combine_row_stochastic_graphs(graphs):
     graph = functools.reduce(lambda x, y: x + y, graphs)
-    graph.data /= len(graphs)
+
+    rowsum = array_sum(graph, axis=1).astype(float)
+
+    if np.all(rowsum == len(graphs)):
+        if sps.issparse(graph):
+            graph.data /= len(graphs)
+        else:
+            graph /= len(graphs)
+
+    else:
+        _row_divide(graph, rowsum)
 
     return graph
 
@@ -168,37 +178,40 @@ def neighbor_graph(adata, pc, k, metric='euclidean'):
     return adata
 
 
+def _invert_distance_graph(graph):
+
+    if sps.issparse(graph):
+
+        rowmean = array_sum(graph, axis=1).astype(float) / graph.shape[1]
+        rowmean[rowmean == 0] = 1.
+
+        _row_divide(graph, rowmean)
+        graph.data *= -1
+        np.exp(graph.data, out=graph.data, where=graph.data != 0)
+
+        return graph
+
+    else:
+
+        rowmean = graph.mean(axis=1)
+        rowmean[rowmean == 0] = 1.
+
+        graph /= rowmean[:, None]
+        graph *= -1
+        np.exp(graph, out=graph, where=graph != 0)
+
+        return graph
+
+
 def _dist_to_row_stochastic(graph):
 
-    if sps.isspmatrix(graph):
+    if sps.issparse(graph):
 
         rowsum = array_sum(graph, axis=1).astype(float)
         rowsum[rowsum == 0] = 1.
 
-        # Dot product between inverse rowsum diagonalized
-        # and graph.
-        # Somehow faster then element-wise \_o_/
+        return _row_divide(graph, rowsum)
 
-        if is_csr(graph):
-            from ..sparse.math import _csr_row_divide
-
-            _csr_row_divide(
-                graph.data,
-                graph.indptr,
-                rowsum
-            )
-            return graph
-        else:
-            return dot(
-                sps.diags(
-                    (1. / rowsum),
-                    offsets=0,
-                    shape=graph.shape,
-                    format='csr',
-                    dtype=graph.dtype
-                ),
-                graph
-            )
     else:
 
         rowsum = graph.sum(axis=1)
@@ -222,3 +235,39 @@ def _connect_to_row_stochastic(graph):
         graph = graph.astype(graph_dtype)
 
     return _dist_to_row_stochastic(graph)
+
+
+def _row_divide(arr, row_divide_vector):
+
+    if sps.issparse(arr):
+
+        # Numba function for CSR
+        # more memory efficient
+        if is_csr(arr):
+            from ..sparse.math import _csr_row_divide
+
+            _csr_row_divide(
+                arr.data,
+                arr.indptr,
+                row_divide_vector
+            )
+            return arr
+
+        # Dot product between inverse rowsum diagonalized
+        # and graph.
+        # Somehow faster then element-wise \_o_/
+        else:
+            return dot(
+                sps.diags(
+                    (1. / row_divide_vector),
+                    offsets=0,
+                    shape=arr.shape,
+                    format='csr',
+                    dtype=arr.dtype
+                ),
+                arr
+            )
+
+    else:
+        arr /= row_divide_vector[:, None]
+        return arr

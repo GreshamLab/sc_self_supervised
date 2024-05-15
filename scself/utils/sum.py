@@ -5,8 +5,11 @@ from scself.sparse import is_csr
 
 def array_sum(array, axis=None, squared=False):
 
+    if not sps.issparse(array):
+        return array.sum(axis)
+
     # If it's not a CSR array use builtins
-    if not is_csr(array):
+    elif not is_csr(array):
 
         if squared and not sps.issparse(array):
             _sums = (array ** 2).sum(axis=axis)

@@ -9,6 +9,7 @@ from scself._noise2self.graph import local_optimal_knn
 from scself._noise2self.common import (
     _dist_to_row_stochastic,
     _connect_to_row_stochastic,
+    _invert_distance_graph,
     _search_k,
     standardize_data
 )
@@ -40,12 +41,40 @@ PDIST = sklearn.metrics.pairwise_distances(PEAKS, metric='cosine')
 ADATA = ad.AnnData(EXPR.astype(int))
 
 
-def _knn(k):
+def _knn(k, dist=sps.csr_matrix(DIST)):
     return local_optimal_knn(
-        sps.csr_matrix(DIST),
+        dist.copy(),
         np.array([k] * 100),
         keep='smallest'
     )
+
+
+class TestDistInvert(unittest.TestCase):
+
+    def test_invert_sparse(self):
+        graph = sps.csr_matrix(DIST)
+        graph = _invert_distance_graph(graph).A
+
+        invert_order = np.zeros_like(DIST)
+        np.divide(1, DIST, out=invert_order, where=DIST != 0)
+
+        for i in range(graph.shape[0]):
+            npt.assert_equal(
+                np.argsort(invert_order[i]),
+                np.argsort(graph[i])
+            )
+
+    def test_invert_dense(self):
+        graph = _invert_distance_graph(DIST.copy())
+
+        invert_order = np.zeros_like(DIST)
+        np.divide(1, DIST, out=invert_order, where=DIST != 0)
+
+        for i in range(graph.shape[0]):
+            npt.assert_equal(
+                np.argsort(invert_order[i]),
+                np.argsort(graph[i])
+            )
 
 
 class TestRowStochastic(unittest.TestCase):
@@ -102,9 +131,10 @@ class TestRowStochastic(unittest.TestCase):
 
     def test_zero_k(self):
 
-        row_stochastic = _dist_to_row_stochastic(
-            sps.csr_matrix((M, M), dtype=float)
-        )
+        graph = _knn(3, dist=sps.csr_matrix((M, M), dtype=float))
+        npt.assert_array_equal(graph.getnnz(), 0)
+
+        row_stochastic = _dist_to_row_stochastic(graph)
         row_sums = row_stochastic.sum(axis=1).A1
 
         npt.assert_almost_equal(np.zeros_like(row_sums), row_sums)
@@ -113,9 +143,10 @@ class TestRowStochastic(unittest.TestCase):
 
     def test_zero_k_connect(self):
 
-        row_stochastic = _connect_to_row_stochastic(
-            sps.csr_matrix((M, M), dtype=float)
-        )
+        graph = _knn(3, dist=sps.csr_matrix((M, M), dtype=float))
+        npt.assert_array_equal(graph.getnnz(), 0)
+
+        row_stochastic = _connect_to_row_stochastic(graph)
         row_sums = row_stochastic.sum(axis=1).A1
 
         npt.assert_almost_equal(np.zeros_like(row_sums), row_sums)
@@ -123,29 +154,32 @@ class TestRowStochastic(unittest.TestCase):
         self.assertTrue(sps.isspmatrix_csr(row_stochastic))
 
 
-class TestKNNSearch(unittest.TestCase):
+class _N2SSetup:
 
     data = EXPR.astype(float)
-    dist = DIST.copy()
+    dist = (DIST.copy(), )
     normalize = 'log'
     loss = 'mse'
     correct_loss = np.array([
         234.314,
-        166.83420601,
-        149.88290938,
-        143.72348837,
-        138.18590639,
-        139.83859323
+        223.1832274,
+        212.9209424,
+        203.5771366,
+        194.4068273,
+        185.2830849
     ])
-    correct_mse_argmin = 4
+    correct_mse_argmin = 5
     correct_opt_pc = 7
     correct_opt_k = 4
+
+
+class TestKNNSearch(_N2SSetup, unittest.TestCase):
 
     def test_ksearch_regression(self):
 
         mse = _search_k(
             self.data,
-            (self.dist, ),
+            self.dist,
             np.arange(1, 7),
             loss=self.loss
         )
@@ -161,7 +195,7 @@ class TestKNNSearch(unittest.TestCase):
 
         mse = _search_k(
             sps.csr_matrix(self.data),
-            (self.dist, ),
+            self.dist,
             np.arange(1, 7),
             loss=self.loss
         )
@@ -172,6 +206,9 @@ class TestKNNSearch(unittest.TestCase):
             self.correct_loss,
             mse
         )
+
+
+class TestNoise2Self(_N2SSetup, unittest.TestCase):
 
     def test_knn_select_stack_regression(self):
 
@@ -213,36 +250,42 @@ class TestKNNSearch(unittest.TestCase):
         self.assertIsNone(opt_k)
 
 
-class TestKNNSearchNoNorm(TestKNNSearch):
+class TestKNNSearchNoNorm(TestNoise2Self):
 
     normalize = None
     data = standardize_data(
         ad.AnnData(EXPR.astype(np.float32))
     ).X
 
-    @unittest.skip
-    def test_ksearch_regression(self):
-        pass
 
-    @unittest.skip
-    def test_ksearch_regression_sparse(self):
-        pass
-
-
-class TestKNNSearchLogLoss(TestKNNSearch):
+class TestKNNSearchLogLoss(TestKNNSearch, TestNoise2Self):
 
     normalize = None
     data = PEAKS.astype(float)
-    dist = PDIST.copy()
+    dist = (PDIST.copy(), )
     loss = 'log_loss'
     correct_loss = np.array([
         0.999322,
-        0.6487723,
-        0.3080371,
-        0.2210291,
-        0.2230496,
-        0.1966515
+        0.5909092,
+        0.3082457,
+        0.2716103,
+        0.2355531,
+        0.1897085
     ])
-    correct_mse_argmin = 5
     correct_opt_pc = 7
     correct_opt_k = 8
+
+
+class TestKNNSearchMultimodal(TestKNNSearch):
+
+    dist = (DIST.copy(), DIST.copy())
+
+
+class TestKNNSearchMultimodalRescale(TestKNNSearch):
+
+    dist = (DIST.copy() * 10, DIST.copy() / 2)
+
+
+class TestKNNSearchMultimodalEdge(TestKNNSearch):
+
+    dist = (DIST.copy() * 10, sps.csr_array(DIST.shape))
