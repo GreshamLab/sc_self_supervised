@@ -125,7 +125,7 @@ def multimodal_noise2self(
         # Search for the smallest MSE for each n_pcs / k combination
         # Outer loop does PCs, because the distance graph has to be
         # recalculated when PCs changes
-        for i, pc in tqdm.tqdm(enumerate(npcs)):
+        for i, pc in tqdm.tqdm(enumerate(npcs), total=len(npcs)):
 
             # Calculate neighbor graph with the max number of neighbors
             # Faster to select only a subset of edges than to recalculate
