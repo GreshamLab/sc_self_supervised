@@ -96,7 +96,7 @@ def multimodal_noise2self(
         )
 
     for c, p in zip(count_data, pc_data):
-        _check_input_data(npcs, c, pc_data)
+        _check_input_data(npcs, c, p)
 
     data_obj = [None] * _n_modes
     expr_data = [None] * _n_modes

@@ -179,7 +179,8 @@ def _check_args(
             f"{npcs.dtype} provided"
         )
 
-    _check_input_data(npcs, count_data, pc_data)
+    if count_data is not None:
+        _check_input_data(npcs, count_data, pc_data)
 
     return neighbors, npcs
 
@@ -192,13 +193,19 @@ def _check_input_data(
 
     _max_pcs = np.max(npcs)
 
+    if count_data is not None:
+        _min_dim = min(count_data.shape)
+    else:
+        _min_dim = None
+
     # Check input data sizes
     if pc_data is not None and pc_data.shape[1] < _max_pcs:
         raise ValueError(
             f"Cannot search through {_max_pcs} PCs; only "
             f"{pc_data.shape[1]} components provided"
         )
-    elif min(count_data.shape) < _max_pcs:
+
+    if _min_dim is not None and _min_dim < _max_pcs:
         raise ValueError(
             f"Cannot search through {_max_pcs} PCs for "
             f"data {count_data.shape} provided"

@@ -6,7 +6,10 @@ try:
 
     def sparse_dot_patch(spmat):
 
-        spmat.dot = types.MethodType(dot, spmat)
+        def _patch(*args, **kwargs):
+            return dot(*args, cast=True, **kwargs)
+
+        spmat.dot = types.MethodType(_patch, spmat)
 
 except ImportError as err:
 
