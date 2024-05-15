@@ -185,7 +185,7 @@ def multimodal_noise2self(
     # For the global optimal n_pc
     local_k = local_neighbors[np.argmin(
         _search_k(
-            expr_data,
+            expr_data[target_data_index],
             [data_obj[i].obsp['distances'] for i in range(_n_modes)],
             local_neighbors,
             by_row=True,
