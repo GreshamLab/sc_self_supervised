@@ -21,6 +21,25 @@ N_PCS = np.arange(5, 115, 10)
 N_NEIGHBORS = np.arange(15, 115, 10)
 
 
+def row_normalize(
+    graph,
+    connectivity=False,
+    copy=False
+):
+
+    if copy:
+        graph = graph.copy()
+
+    if connectivity:
+        return _connect_to_row_stochastic(graph)
+    else:
+        return _dist_to_row_stochastic(
+            _invert_distance_graph(
+                graph
+            )
+        )
+
+
 def _search_k(
     X,
     graphs,
@@ -55,14 +74,6 @@ def _search_k(
 
     mses = np.zeros(n_k) if not by_row else np.zeros((n_k, n))
 
-    if connectivity:
-        row_normalize = _connect_to_row_stochastic
-    else:
-        def row_normalize(x):
-            return _dist_to_row_stochastic(
-                _invert_distance_graph(x)
-            )
-
     for i in range(n_k):
 
         k_graph = [
@@ -73,7 +84,8 @@ def _search_k(
                     graph.copy(),
                     np.full(n, k[i]),
                     keep='smallest'
-                )
+                ),
+                connectivity=connectivity
             )
             for graph in graphs
         ]
