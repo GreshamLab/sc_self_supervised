@@ -130,17 +130,18 @@ def multimodal_noise2self(
             # Calculate neighbor graph with the max number of neighbors
             # Faster to select only a subset of edges than to recalculate
             # (obviously)
-            neighbor_graph(
-                data_obj,
-                pc,
-                np.max(neighbors),
-                metric=metric
-            )
+            for i in range(_n_modes):
+                neighbor_graph(
+                    data_obj[i],
+                    pc,
+                    np.max(neighbors),
+                    metric=metric
+                )
 
             # Search through the neighbors space
             mses[i, :] = _search_k(
-                expr_data,
-                (data_obj.obsp['distances'], ),
+                expr_data[target_data_index],
+                [data_obj[i].obsp['distances'] for i in range(_n_modes)],
                 neighbors,
                 connectivity=connectivity,
                 loss=loss,
@@ -166,12 +167,13 @@ def multimodal_noise2self(
         op_k = None
 
     # Recalculate a k-NN graph from the optimal # of PCs
-    neighbor_graph(
-        data_obj,
-        npcs[op_pc],
-        np.max(neighbors),
-        metric=metric
-    )
+    for i in range(_n_modes):
+        neighbor_graph(
+            data_obj[i],
+            npcs[op_pc],
+            np.max(neighbors),
+            metric=metric
+        )
 
     # Search space for k-neighbors
     local_neighbors = np.arange(
@@ -184,7 +186,7 @@ def multimodal_noise2self(
     local_k = local_neighbors[np.argmin(
         _search_k(
             expr_data,
-            (data_obj.obsp['distances'], ),
+            [data_obj[i].obsp['distances'] for i in range(_n_modes)],
             local_neighbors,
             by_row=True,
             connectivity=connectivity,
@@ -196,15 +198,18 @@ def multimodal_noise2self(
     )]
 
     # Pack return object:
-    # Optimal (variable-k) graph
+    # Optimal (variable-k) graphs
     # Optimal # of PCs
     # Optimal # of neighbors (global)
     # Optimal # of neighbors (local)
     optimals = (
-        local_optimal_knn(
-            data_obj.obsp['distances'],
-            local_k
-        ),
+        [
+            local_optimal_knn(
+                data_obj[i].obsp['distances'],
+                local_k
+            )
+            for i in range(_n_modes)
+        ],
         npcs[op_pc],
         neighbors[op_k] if op_k is not None else None,
         local_k
