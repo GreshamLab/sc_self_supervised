@@ -38,3 +38,5 @@ def noise2self(
     verbose=None
 )
 ```
+
+Implemented as in [DEWÄKSS](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008569)
