@@ -165,7 +165,8 @@ def noise2self(
         connectivity=connectivity,
         loss=loss,
         loss_kwargs=loss_kwargs,
-        chunk_size=chunk_size
+        chunk_size=chunk_size,
+        pbar=True
     )
 
     local_k = local_neighbors[np.argmin(local_error, axis=0)]
