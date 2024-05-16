@@ -153,6 +153,8 @@ def noise2self(
         np.max(neighbors)
     )
 
+    log(f"Searching local k ({local_neighbors[0]}-{local_neighbors[-1]})")
+
     # Search for the optimal number of k for each obs
     # For the global optimal n_pc
     local_k = local_neighbors[np.argmin(
@@ -168,6 +170,11 @@ def noise2self(
         ),
         axis=0
     )]
+
+    log(
+        f"Optimal local k complete ({local_k.min()}-{local_k.max()}, "
+        f"mean={local_k.mean()}"
+    )
 
     # Pack return object:
     # Optimal (variable-k) graph

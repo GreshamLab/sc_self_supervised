@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.sparse as sps
 import anndata as ad
+import tqdm
 
 from scself.utils import (
     dot,
@@ -48,7 +49,8 @@ def _search_k(
     loss='mse',
     loss_kwargs={},
     connectivity=False,
-    chunk_size=10000
+    chunk_size=10000,
+    pbar=False
 ):
     """
     Find optimal number of neighbors for a given graph
@@ -74,7 +76,12 @@ def _search_k(
 
     mses = np.zeros(n_k) if not by_row else np.zeros((n_k, n))
 
-    for i in range(n_k):
+    if pbar:
+        rfunc = tqdm.trange
+    else:
+        rfunc = range
+
+    for i in rfunc(n_k):
 
         k_graph = [
             # Convert to a row stochastic graph
