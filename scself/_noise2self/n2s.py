@@ -157,19 +157,18 @@ def noise2self(
 
     # Search for the optimal number of k for each obs
     # For the global optimal n_pc
-    local_k = local_neighbors[np.argmin(
-        _search_k(
-            expr_data,
-            (data_obj.obsp['distances'], ),
-            local_neighbors,
-            by_row=True,
-            connectivity=connectivity,
-            loss=loss,
-            loss_kwargs=loss_kwargs,
-            chunk_size=chunk_size
-        ),
-        axis=0
-    )]
+    local_error = _search_k(
+        expr_data,
+        (data_obj.obsp['distances'], ),
+        local_neighbors,
+        by_row=True,
+        connectivity=connectivity,
+        loss=loss,
+        loss_kwargs=loss_kwargs,
+        chunk_size=chunk_size
+    )
+
+    local_k = local_neighbors[np.argmin(local_error, axis=0)]
 
     log(
         f"Optimal local k complete ({local_k.min()}-{local_k.max()}, "
@@ -192,7 +191,7 @@ def noise2self(
     )
 
     if return_errors:
-        return optimals, mses
+        return optimals, (mses, local_error)
 
     else:
         return optimals

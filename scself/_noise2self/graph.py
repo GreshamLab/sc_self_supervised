@@ -189,6 +189,8 @@ def _invert_distance_graph(graph):
         graph.data *= -1
         np.exp(graph.data, out=graph.data, where=graph.data != 0)
 
+        set_diag(graph, 0)
+
         return graph
 
     else:
@@ -199,6 +201,8 @@ def _invert_distance_graph(graph):
         graph /= rowmean[:, None]
         graph *= -1
         np.exp(graph, out=graph, where=graph != 0)
+
+        set_diag(graph, 0)
 
         return graph
 
