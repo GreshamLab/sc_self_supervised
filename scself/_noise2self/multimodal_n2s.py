@@ -28,6 +28,7 @@ def multimodal_noise2self(
     connectivity=False,
     pc_data=None,
     chunk_size=10000,
+    random_state=None,
     verbose=None
 ):
     """
@@ -78,6 +79,7 @@ def multimodal_noise2self(
         neighbors,
         npcs
     )
+    _max_neighbors = np.max(neighbors)
 
     if not isinstance(count_data, (list, tuple)):
         raise ValueError(
@@ -108,7 +110,10 @@ def multimodal_noise2self(
             standardization_method
         )
 
-    log(f"Searching {len(npcs)} PC x {len(neighbors)} Neighbors space")
+    log(
+        f"Searching {len(npcs)} PCs [{np.min(npcs)}-{np.max(npcs)}] by "
+        f"{len(neighbors)} Neighbors [{np.min(neighbors)}-{_max_neighbors}]"
+    )
 
     for i in range(_n_modes):
         if pc_data[i] is not None:
@@ -125,7 +130,9 @@ def multimodal_noise2self(
         # Search for the smallest MSE for each n_pcs / k combination
         # Outer loop does PCs, because the distance graph has to be
         # recalculated when PCs changes
-        for i, pc in tqdm.tqdm(enumerate(npcs), total=len(npcs)):
+        for i, pc in (pbar := tqdm.tqdm(enumerate(npcs), total=len(npcs))):
+
+            pbar.set_description(f"{pc} PCs")
 
             # Calculate neighbor graph with the max number of neighbors
             # Faster to select only a subset of edges than to recalculate
@@ -134,8 +141,9 @@ def multimodal_noise2self(
                 neighbor_graph(
                     data_obj[i],
                     pc,
-                    np.max(neighbors),
-                    metric=metric
+                    _max_neighbors,
+                    metric=metric,
+                    random_state=random_state
                 )
 
             # Search through the neighbors space
@@ -171,31 +179,39 @@ def multimodal_noise2self(
         neighbor_graph(
             data_obj[i],
             npcs[op_pc],
-            np.max(neighbors),
-            metric=metric
+            _max_neighbors,
+            metric=metric,
+            random_state=random_state
         )
 
     # Search space for k-neighbors
     local_neighbors = np.arange(
         np.min(neighbors) if len(neighbors) > 1 else 1,
-        np.max(neighbors)
+        _max_neighbors + 1
     )
+
+    log(f"Searching local k ({local_neighbors[0]}-{local_neighbors[-1]})")
 
     # Search for the optimal number of k for each obs
     # For the global optimal n_pc
-    local_k = local_neighbors[np.argmin(
-        _search_k(
-            expr_data[target_data_index],
-            [data_obj[i].obsp['distances'] for i in range(_n_modes)],
-            local_neighbors,
-            by_row=True,
-            connectivity=connectivity,
-            loss=loss,
-            loss_kwargs=loss_kwargs,
-            chunk_size=chunk_size
-        ),
-        axis=0
-    )]
+    local_error = _search_k(
+        expr_data[target_data_index],
+        [data_obj[i].obsp['distances'] for i in range(_n_modes)],
+        local_neighbors,
+        by_row=True,
+        connectivity=connectivity,
+        loss=loss,
+        loss_kwargs=loss_kwargs,
+        chunk_size=chunk_size,
+        pbar=True
+    )
+
+    local_k = local_neighbors[np.argmin(local_error, axis=0)]
+
+    log(
+        f"Optimal local k complete ({local_k.min()}-{local_k.max()}, "
+        f"mean={local_k.mean()})"
+    )
 
     # Pack return object:
     # Optimal (variable-k) graphs
@@ -216,7 +232,7 @@ def multimodal_noise2self(
     )
 
     if return_errors:
-        return optimals, mses
+        return optimals, (mses, local_error)
 
     else:
         return optimals

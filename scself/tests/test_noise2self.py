@@ -350,7 +350,8 @@ class TestNoise2Self(_N2SSetup, unittest.TestCase):
             np.array([3, 5, 7]),
             loss=self.loss,
             standardization_method=self.normalize,
-            return_errors=True
+            return_errors=True,
+            random_state=50
         )
 
         self.assertEqual(opt_pc, self.correct_opt_pc)

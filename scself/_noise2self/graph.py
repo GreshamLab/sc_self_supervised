@@ -146,7 +146,7 @@ def set_diag(X, diag):
     return X
 
 
-def neighbor_graph(adata, pc, k, metric='euclidean'):
+def neighbor_graph(adata, pc, k, metric='euclidean', random_state=None):
     """
     Build neighbor graph in an AnnData object
     """
@@ -156,7 +156,8 @@ def neighbor_graph(adata, pc, k, metric='euclidean'):
         adata.obsp['distances'] = NearestNeighbors(
             n_neighbors=k,
             metric=metric,
-            n_jobs=-1
+            n_jobs=-1,
+            algorithm='brute'
         ).fit(adata.obsm['X_pca'][:, :pc]).kneighbors_graph()
 
     else:
@@ -166,6 +167,7 @@ def neighbor_graph(adata, pc, k, metric='euclidean'):
             metric=metric,
             n_trees=min(64, 5 + int(round((adata.n_obs) ** 0.5 / 20.0))),
             n_iters=max(5, int(round(np.log2(adata.n_obs)))),
+            random_state=random_state
         ).fit_transform(adata.obsm['X_pca'][:, :pc])
 
     # Enforce diagonal zeros on graph

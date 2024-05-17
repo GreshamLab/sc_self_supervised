@@ -25,6 +25,7 @@ def noise2self(
     standardization_method='log',
     pc_data=None,
     chunk_size=10000,
+    random_state=None,
     verbose=None
 ):
     """
@@ -114,7 +115,8 @@ def noise2self(
                 data_obj,
                 pc,
                 _max_neighbors,
-                metric=metric
+                metric=metric,
+                random_state=random_state
             )
 
             # Search through the neighbors space
@@ -150,7 +152,8 @@ def noise2self(
         data_obj,
         npcs[op_pc],
         _max_neighbors,
-        metric=metric
+        metric=metric,
+        random_state=random_state
     )
 
     # Search space for k-neighbors
