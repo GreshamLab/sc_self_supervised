@@ -57,8 +57,8 @@ def _search_k(
 
     :param X: Data [M x N]
     :type X: np.ndarray, sp.spmatrix
-    :param graph: Graph
-    :type graph: np.ndarray, sp.spmatrix
+    :param graph: List or tuple of graphs [M x M]
+    :type graph: tuple(np.ndarray, sp.spmatrix)
     :param k: k values to search
     :type k: np.ndarray [K]
     :param by_row: Get optimal k for each observation,
@@ -74,6 +74,13 @@ def _search_k(
     n, _ = X.shape
     n_k = len(k)
 
+    if not isinstance(graphs, (list, tuple)):
+        raise ValueError(
+            f"graphs must be a list or tuple; "
+            f"{type(graphs)} provided"
+        )
+
+    n_modes = len(graphs)
     mses = np.zeros(n_k) if not by_row else np.zeros((n_k, n))
 
     if pbar:
@@ -97,7 +104,7 @@ def _search_k(
             for graph in graphs
         ]
 
-        if len(k_graph) == 1:
+        if n_modes == 1:
             k_graph = k_graph[0]
         else:
             k_graph = combine_row_stochastic_graphs(k_graph)
@@ -126,10 +133,10 @@ def _noise_to_self_error(
 
     if (metric == 'mse' and is_csr(X)):
 
-        from ..sparse.graph import _chunk_graph_mse
+        from ..sparse.graph import chunk_graph_mse
 
         if chunk_size is None:
-            _row_mse = _chunk_graph_mse(
+            _row_mse = chunk_graph_mse(
                 X,
                 k_graph
             )
@@ -147,7 +154,7 @@ def _noise_to_self_error(
                 if _end <= _start:
                     break
 
-                _row_mse[_start:_end] = _chunk_graph_mse(
+                _row_mse[_start:_end] = chunk_graph_mse(
                     X,
                     k_graph,
                     _start,

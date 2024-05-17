@@ -182,6 +182,22 @@ def _invert_distance_graph(graph):
 
     if sps.issparse(graph):
 
+        _nonzero = graph.data != 0.
+        graph.data[_nonzero] = 1 / graph.data[_nonzero]
+
+        return graph
+
+    else:
+
+        np.divide(1, graph, out=graph, where=graph != 0)
+
+        return graph
+
+
+def _invert_distance_magic_graph(graph):
+
+    if sps.issparse(graph):
+
         rowmean = array_sum(graph, axis=1).astype(float) / graph.shape[1]
         rowmean[rowmean == 0] = 1.
 

@@ -77,13 +77,17 @@ def noise2self(
         count_data,
         pc_data
     )
+    _max_neighbors = np.max(neighbors)
 
     data_obj, expr_data = _standardize(
         count_data,
         standardization_method
     )
 
-    log(f"Searching {len(npcs)} PC x {len(neighbors)} Neighbors space")
+    log(
+        f"Searching {len(npcs)} PCs [{np.min(npcs)}-{np.max(npcs)}] by "
+        f"{len(neighbors)} Neighbors [{np.min(neighbors)}-{_max_neighbors}]"
+    )
 
     if pc_data is not None:
         log(f"Using existing PCs {pc_data.shape}")
@@ -99,7 +103,9 @@ def noise2self(
         # Search for the smallest MSE for each n_pcs / k combination
         # Outer loop does PCs, because the distance graph has to be
         # recalculated when PCs changes
-        for i, pc in tqdm.tqdm(enumerate(npcs), total=len(npcs)):
+        for i, pc in (pbar := tqdm.tqdm(enumerate(npcs), total=len(npcs))):
+
+            pbar.set_description(f"{pc} PCs")
 
             # Calculate neighbor graph with the max number of neighbors
             # Faster to select only a subset of edges than to recalculate
@@ -107,7 +113,7 @@ def noise2self(
             neighbor_graph(
                 data_obj,
                 pc,
-                np.max(neighbors),
+                _max_neighbors,
                 metric=metric
             )
 
@@ -143,14 +149,14 @@ def noise2self(
     neighbor_graph(
         data_obj,
         npcs[op_pc],
-        np.max(neighbors),
+        _max_neighbors,
         metric=metric
     )
 
     # Search space for k-neighbors
     local_neighbors = np.arange(
         np.min(neighbors) if len(neighbors) > 1 else 1,
-        np.max(neighbors)
+        _max_neighbors + 1
     )
 
     log(f"Searching local k ({local_neighbors[0]}-{local_neighbors[-1]})")

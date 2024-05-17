@@ -52,7 +52,7 @@ def _shrink_sparse_graph_k(
                 _data[np.argsort(_data)[:_n - k]] = 0
 
 
-def _chunk_graph_mse(
+def chunk_graph_mse(
     X,
     k_graph,
     start=None,
@@ -90,6 +90,7 @@ def _mse_rowwise(
     a_indptr,
     b
 ):
+    # B WILL BE OVERWRITTEN #
 
     n_row = b.shape[0]
     output = np.zeros(n_row, dtype=float)

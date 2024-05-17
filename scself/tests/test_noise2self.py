@@ -51,6 +51,26 @@ def _knn(k, dist=sps.csr_matrix(DIST)):
     )
 
 
+class TestKnnSelect(unittest.TestCase):
+
+    def test_nnz(self):
+
+        knn_1 = _knn(1)
+        npt.assert_equal(knn_1.indptr, np.arange(101))
+
+        knn_2 = _knn(2)
+        npt.assert_equal(knn_2.indptr, np.arange(101) * 2)
+
+        for i in range(100):
+            npt.assert_equal(
+                sorted(knn_2[i].indices),
+                sorted(np.argsort(DIST[i, :])[1:3])
+            )
+
+        knn_7 = _knn(7)
+        npt.assert_equal(knn_7.indptr, np.arange(101) * 7)
+
+
 class TestError(unittest.TestCase):
 
     def test_error_max_dense(self):
@@ -170,6 +190,9 @@ class TestDistInvert(unittest.TestCase):
                 np.argsort(graph[i])
             )
 
+        _rowsum = graph.sum(axis=1)
+        npt.assert_almost_equal(_rowsum, np.ones_like(_rowsum))
+
     def test_row_normalize_dense(self):
         graph = row_normalize(DIST.copy())
 
@@ -181,6 +204,9 @@ class TestDistInvert(unittest.TestCase):
                 np.argsort(invert_order[i]),
                 np.argsort(graph[i])
             )
+
+        _rowsum = graph.sum(axis=1)
+        npt.assert_almost_equal(_rowsum, np.ones_like(_rowsum))
 
 
 class TestRowStochastic(unittest.TestCase):
@@ -268,13 +294,13 @@ class _N2SSetup:
     loss = 'mse'
     correct_loss = np.array([
         234.314,
-        223.1832274,
-        212.9209424,
-        203.5771366,
-        194.4068273,
-        185.2830849
+        160.764803,
+        142.8430503,
+        135.422603,
+        130.4516997,
+        130.762186
     ])
-    correct_mse_argmin = 5
+    correct_mse_argmin = 4
     correct_opt_pc = 7
     correct_opt_k = 4
 
@@ -327,9 +353,6 @@ class TestNoise2Self(_N2SSetup, unittest.TestCase):
             return_errors=True
         )
 
-        print(errs[1])
-        #assert False
-
         self.assertEqual(opt_pc, self.correct_opt_pc)
         self.assertEqual(opt_k, self.correct_opt_k)
 
@@ -376,14 +399,15 @@ class TestKNNSearchLogLoss(TestKNNSearch, TestNoise2Self):
     loss = 'log_loss'
     correct_loss = np.array([
         0.999322,
-        0.5909092,
-        0.3082457,
-        0.2716103,
-        0.2355531,
-        0.1897085
+        0.4702795,
+        0.2203677,
+        0.1766228,
+        0.1764214,
+        0.1564008
     ])
     correct_opt_pc = 7
     correct_opt_k = 8
+    correct_mse_argmin = 5
 
 
 class TestKNNSearchMultimodal(TestKNNSearch):

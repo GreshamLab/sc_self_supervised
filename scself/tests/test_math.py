@@ -44,7 +44,7 @@ class TestMSENumba(unittest.TestCase):
         cls.Z_noY = np.mean(cls.X ** 2)
         cls.Z_noY_row = np.mean(cls.X ** 2, axis=1)
 
-    def test_mse_rowwise(self):
+    def test_mcv_error(self):
 
         npt.assert_array_almost_equal(
             mcv_mean_error(
