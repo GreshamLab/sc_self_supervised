@@ -173,7 +173,7 @@ def noise2self(
 
     log(
         f"Optimal local k complete ({local_k.min()}-{local_k.max()}, "
-        f"mean={local_k.mean()}"
+        f"mean={local_k.mean()})"
     )
 
     # Pack return object:

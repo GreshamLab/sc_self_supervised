@@ -11,7 +11,9 @@ from scself._noise2self.common import (
     _connect_to_row_stochastic,
     _invert_distance_graph,
     _search_k,
-    standardize_data
+    _noise_to_self_error,
+    standardize_data,
+    row_normalize
 )
 from scself._noise2self import noise2self
 
@@ -49,6 +51,85 @@ def _knn(k, dist=sps.csr_matrix(DIST)):
     )
 
 
+class TestError(unittest.TestCase):
+
+    def test_error_max_dense(self):
+
+        err = _noise_to_self_error(
+            EXPR.astype(np.float64),
+            np.zeros_like(DIST),
+            by_row=True
+        )
+
+        expect = np.mean(EXPR ** 2, axis=1)
+
+        npt.assert_almost_equal(err, expect)
+
+    def test_error_max_sparse(self):
+
+        err = _noise_to_self_error(
+            sps.csr_array(EXPR.astype(np.float64)),
+            sps.csr_array(np.zeros_like(DIST)),
+            chunk_size=5,
+            by_row=True
+        )
+
+        expect = np.mean(EXPR ** 2, axis=1)
+
+        npt.assert_almost_equal(err, expect)
+
+    def test_error_max_sparse_nochunk(self):
+
+        err = _noise_to_self_error(
+            sps.csr_array(EXPR.astype(np.float64)),
+            sps.csr_array(np.zeros_like(DIST)),
+            chunk_size=None,
+            by_row=True
+        )
+
+        expect = np.mean(EXPR ** 2, axis=1)
+
+        npt.assert_almost_equal(err, expect)
+
+    def test_error_min_dense(self):
+
+        err = _noise_to_self_error(
+            EXPR.astype(np.float64),
+            np.eye(DIST.shape[0]),
+            by_row=True
+        )
+
+        expect = np.zeros_like(err)
+
+        npt.assert_almost_equal(err, expect)
+
+    def test_error_min_sparse(self):
+
+        err = _noise_to_self_error(
+            sps.csr_array(EXPR.astype(np.float64)),
+            sps.csr_array(np.eye(DIST.shape[0])),
+            chunk_size=5,
+            by_row=True
+        )
+
+        expect = np.zeros_like(err)
+
+        npt.assert_almost_equal(err, expect)
+
+    def test_error_min_sparse_nochunk(self):
+
+        err = _noise_to_self_error(
+            sps.csr_array(EXPR.astype(np.float64)),
+            sps.csr_array(np.eye(DIST.shape[0])),
+            chunk_size=None,
+            by_row=True
+        )
+
+        expect = np.zeros_like(err)
+
+        npt.assert_almost_equal(err, expect)
+
+
 class TestDistInvert(unittest.TestCase):
 
     def test_invert_sparse(self):
@@ -66,6 +147,31 @@ class TestDistInvert(unittest.TestCase):
 
     def test_invert_dense(self):
         graph = _invert_distance_graph(DIST.copy())
+
+        invert_order = np.zeros_like(DIST)
+        np.divide(1, DIST, out=invert_order, where=DIST != 0)
+
+        for i in range(graph.shape[0]):
+            npt.assert_equal(
+                np.argsort(invert_order[i]),
+                np.argsort(graph[i])
+            )
+
+    def test_row_normalize(self):
+        graph = sps.csr_matrix(DIST)
+        graph = row_normalize(graph).A
+
+        invert_order = np.zeros_like(DIST)
+        np.divide(1, DIST, out=invert_order, where=DIST != 0)
+
+        for i in range(graph.shape[0]):
+            npt.assert_equal(
+                np.argsort(invert_order[i]),
+                np.argsort(graph[i])
+            )
+
+    def test_row_normalize_dense(self):
+        graph = row_normalize(DIST.copy())
 
         invert_order = np.zeros_like(DIST)
         np.divide(1, DIST, out=invert_order, where=DIST != 0)
@@ -212,13 +318,17 @@ class TestNoise2Self(_N2SSetup, unittest.TestCase):
 
     def test_knn_select_stack_regression(self):
 
-        _, opt_pc, opt_k, local_ks = noise2self(
+        (_, opt_pc, opt_k, local_ks), errs = noise2self(
             self.data,
-            np.arange(1, 11),
+            np.arange(4, 11),
             np.array([3, 5, 7]),
             loss=self.loss,
-            standardization_method=self.normalize
+            standardization_method=self.normalize,
+            return_errors=True
         )
+
+        print(errs[1])
+        #assert False
 
         self.assertEqual(opt_pc, self.correct_opt_pc)
         self.assertEqual(opt_k, self.correct_opt_k)
@@ -227,7 +337,7 @@ class TestNoise2Self(_N2SSetup, unittest.TestCase):
 
         obsp, opt_pc, opt_k, local_ks = noise2self(
             sps.csr_matrix(self.data),
-            np.arange(1, 11),
+            np.arange(4, 11),
             np.array([3, 5, 7]),
             loss=self.loss,
             standardization_method=self.normalize
@@ -240,7 +350,7 @@ class TestNoise2Self(_N2SSetup, unittest.TestCase):
 
         _, opt_pc, opt_k, local_ks = noise2self(
             self.data,
-            np.arange(1, 11),
+            np.arange(4, 11),
             5,
             loss=self.loss,
             standardization_method=self.normalize

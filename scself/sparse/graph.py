@@ -55,20 +55,28 @@ def _shrink_sparse_graph_k(
 def _chunk_graph_mse(
     X,
     k_graph,
-    row_start=0,
-    row_end=None
+    start=None,
+    end=None
 ):
-    if row_end is None:
-        row_end = k_graph.shape[0]
+
+    if start is not None:
+        if end is None:
+            end = X.shape[0]
+
+        if end <= start:
+            return
+
+        indptr = X.indptr[start:end + 1]
+        k_graph = k_graph[start:end, :]
     else:
-        row_end = min(k_graph.shape[0], row_end)
+        indptr = X.indptr
 
     return _mse_rowwise(
         X.data,
         X.indices,
-        X.indptr,
+        indptr,
         dot(
-            k_graph[row_start:row_end, :],
+            k_graph,
             X,
             dense=True
         )
@@ -97,9 +105,9 @@ def _mse_rowwise(
             pass
 
         else:
-            row = row.copy()
             row[_idx_a] -= a_data[a_indptr[i]:a_indptr[i + 1]]
+            row **= 2
 
-        output[i] = np.mean(row ** 2)
+        output[i] = np.mean(row)
 
     return output

@@ -124,23 +124,35 @@ def _noise_to_self_error(
     **loss_kwargs
 ):
 
-    if (metric == 'mse' and is_csr(X) and chunk_size is not None):
+    if (metric == 'mse' and is_csr(X)):
 
         from ..sparse.graph import _chunk_graph_mse
 
-        _n_row = X.shape[0]
-        _row_mse = np.zeros(X.shape[0], dtype=float)
-
-        for i in range(int(np.ceil(_n_row / chunk_size))):
-            _start = i * chunk_size
-            _end = min(_start + chunk_size, _n_row)
-
-            _row_mse[_start:_end] = _chunk_graph_mse(
+        if chunk_size is None:
+            _row_mse = _chunk_graph_mse(
                 X,
-                k_graph,
-                _start,
-                _end
+                k_graph
             )
+
+        else:
+            _n_row = X.shape[0]
+            _n_chunks = int(_n_row / chunk_size) + 1
+
+            _row_mse = np.zeros(_n_row, dtype=float)
+
+            for i in range(_n_chunks):
+                _start = i * chunk_size
+                _end = min((i + 1) * chunk_size, _n_row)
+
+                if _end <= _start:
+                    break
+
+                _row_mse[_start:_end] = _chunk_graph_mse(
+                    X,
+                    k_graph,
+                    _start,
+                    _end
+                )
 
     else:
         _row_mse = pairwise_metric(
