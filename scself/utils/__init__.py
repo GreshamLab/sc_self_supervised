@@ -12,3 +12,4 @@ from .pairwise_loss import (
     variance
 )
 from ._pca import pca
+from .shrink import shrink_array_to_zero_inplace

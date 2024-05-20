@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sps
 
-from ..utils import dot
+from ..utils import dot, shrink_array_to_zero_inplace
 from .._noise2self.common import row_normalize
 from .._noise2self.graph import combine_row_stochastic_graphs
 
@@ -207,9 +207,16 @@ def _denoise_chunk(
     if zero_threshold is not None:
 
         if sps.issparse(out):
-            out.data[np.abs(out.data) < zero_threshold] = 0
+            shrink_array_to_zero_inplace(
+                out.data,
+                zero_threshold
+            )
+
         else:
-            out[np.abs(out) < zero_threshold] = 0
+            shrink_array_to_zero_inplace(
+                out,
+                zero_threshold
+            )
 
         try:
             out.eliminate_zeros()
