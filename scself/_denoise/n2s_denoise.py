@@ -11,69 +11,102 @@ def denoise_data(
     graphs,
     connectivity=False,
     zero_threshold=None,
-    chunk_size=None
+    chunk_size=None,
+    dense=None
 ):
+    """
+    Denoise data using a kNN graph.
+
+    Each argument can also be provided as a list where each
+    value represents a different data modality.
+
+    Returns a denoised array or a list of denoised arrays
+    if multiple data modalities is provided.
+
+    :param data: Data to be denoised
+    :type data: list, np.ndarray, sp.spmatrix, sp.sparse_array
+    :param graphs: kNN graph to use for denoising
+    :type graphs: list, np.ndarray, sp.spmatrix, sp.sparse_array
+    :param connectivity: Use kNN graph as a connectivity graph,
+        instead of a distance graph. Defaults to False
+    :type connectivity: bool, optional
+    :param zero_threshold: Shrink values smaller in absolute value
+        down to zero, defaults to None
+    :type zero_threshold: list, float, optional
+    :param chunk_size: Size of chunks (# observations),
+        can reduce memory usage. Defaults to None
+    :type chunk_size: list, None, int, optional
+    :param dense: Return a dense result instead of sparse,
+        None returns sparse if input data is sparse and dense
+        if input data is dense. Defaults to None
+    :type dense: list, bool, optional
+    :return: Returns denoised data as sparse or dense.
+        Will return a list if multiple data modes are provided in
+        the data argument
+    :rtype: list, np.ndarray, sp.spmatrix
+    """
 
     data, graphs, n_modes, n_obs = _check_inputs(data, graphs)
 
+    if dense is None:
+        dense = [not sps.issparse(d) for d in data]
+    elif not isinstance(dense, (tuple, list)):
+        dense = [dense] * n_modes
+
+    if zero_threshold is None:
+        zero_threshold = [None] * n_modes
+    elif not isinstance(zero_threshold, (tuple, list)):
+        zero_threshold = [zero_threshold] * n_modes
+
     # Not chunked
-    if chunk_size is None:
+    if chunk_size is None or (chunk_size >= n_obs):
         _graph = _combine_graphs(graphs, connectivity=connectivity)
         _denoised = [
             _denoise_chunk(
                 d,
                 _graph,
-                zero_threshold=zero_threshold
+                zero_threshold=zero_threshold[i],
+                dense=dense[i]
             )
-            for d in data
+            for i, d in enumerate(data)
         ]
 
-    # Chunked writing into preallocated dense arrays
-    elif zero_threshold is None:
+    # Preallocate dense arrays to write into chunk-wise
+    # and keep a list of sparse chunks to be vstacked
+    else:
+
+        # Preallocate
         _denoised = [
             np.zeros(d.shape, dtype=d.dtype)
-            for d in data
+            if dense[i]
+            else []
+            for i, d in enumerate(data)
         ]
 
         for start, end in _chunk_gen(chunk_size, n_obs):
+
+            # Process chunk combined graph
             _graph_chunk = _combine_graphs(
                 [g[start:end] for g in graphs],
                 connectivity=connectivity
             )
 
+            # Process chunk for each modality
             for i in range(n_modes):
-                _denoise_chunk(
+                _dref = _denoise_chunk(
                     data[i],
                     _graph_chunk,
-                    out=_denoised[i][start:end]
+                    out=_denoised[i][start:end] if dense[i] else None,
+                    zero_threshold=zero_threshold[i]
                 )
 
-    # Chunked with separate arrays for each chunk
-    # stacked at the end
-    else:
-        _denoised = [[] for i in range(n_modes)]
+                if not dense[i]:
+                    _denoised[i].append(_dref)
 
-        for start, end in _chunk_gen(chunk_size, n_obs):
-            _graph_chunk = _combine_graphs(
-                [g[start:end] for g in graphs],
-                connectivity=connectivity
-            )
-
-            for i in range(n_modes):
-                _denoised[i].append(
-                    _denoise_chunk(
-                        data[i],
-                        _graph_chunk,
-                        zero_threshold=zero_threshold
-                    )
-                )
-
-        _denoised = [
-            sps.vstack(d)
-            if sps.issparse(d[0])
-            else np.vstack(d)
-            for d in _denoised
-        ]
+        # Stack sparse arrays if needed
+        for i in range(n_modes):
+            if not dense[i]:
+                _denoised[i] = sps.vstack(_denoised[i])
 
     if len(_denoised) == 1:
         return _denoised[0]
@@ -141,10 +174,14 @@ def _combine_graphs(
 ):
 
     if isinstance(graph_chunks, (tuple, list)):
+
+        if not isinstance(connectivity, (tuple, list)):
+            connectivity = [connectivity] * len(graph_chunks)
+
         return combine_row_stochastic_graphs(
             [
-                row_normalize(g, connectivity=connectivity)
-                for g in graph_chunks
+                row_normalize(g, connectivity=connectivity[i])
+                for i, g in enumerate(graph_chunks)
             ]
         )
 
@@ -156,22 +193,23 @@ def _denoise_chunk(
     x,
     graph,
     zero_threshold=None,
-    out=None
+    out=None,
+    dense=False
 ):
 
     out = dot(
         graph,
         x,
         out=out,
-        dense=zero_threshold is None
+        dense=dense
     )
 
     if zero_threshold is not None:
 
         if sps.issparse(out):
-            out.data[out.data < zero_threshold] = 0
+            out.data[np.abs(out.data) < zero_threshold] = 0
         else:
-            out[out < zero_threshold] = 0
+            out[np.abs(out) < zero_threshold] = 0
 
         try:
             out.eliminate_zeros()

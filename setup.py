@@ -18,7 +18,7 @@ tests_require = [
     "pytest"
 ]
 
-version = "0.4.0"
+version = "0.4.1"
 
 # Description from README.md
 long_description = "\n\n".join(
