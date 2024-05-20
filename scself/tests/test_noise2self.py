@@ -40,8 +40,6 @@ PEAKS = RNG.choice([0, 1], (M, N), p=(0.9, 0.1))
 DIST = sklearn.metrics.pairwise_distances(EXPR, metric='cosine')
 PDIST = sklearn.metrics.pairwise_distances(PEAKS, metric='cosine')
 
-ADATA = ad.AnnData(EXPR.astype(int))
-
 
 def _knn(k, dist=sps.csr_matrix(DIST)):
     return local_optimal_knn(

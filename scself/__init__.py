@@ -1,4 +1,4 @@
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 from ._mcv import (
     mcv,
@@ -16,3 +16,4 @@ from .utils.dot_product import (
     dot,
     sparse_dot_patch
 )
+from ._denoise import denoise_data

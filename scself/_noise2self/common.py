@@ -135,16 +135,20 @@ def _noise_to_self_error(
 
         from ..sparse.graph import chunk_graph_mse
 
+        _n_row = X.shape[0]
+
         if chunk_size is None:
+            _n_chunks = 1
+        else:
+            _n_chunks = int(_n_row / chunk_size) + 1
+
+        if _n_chunks == 1:
             _row_mse = chunk_graph_mse(
                 X,
                 k_graph
             )
 
         else:
-            _n_row = X.shape[0]
-            _n_chunks = int(_n_row / chunk_size) + 1
-
             _row_mse = np.zeros(_n_row, dtype=float)
 
             for i in range(_n_chunks):

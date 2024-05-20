@@ -97,6 +97,7 @@ def combine_row_stochastic_graphs(graphs):
     graph = functools.reduce(lambda x, y: x + y, graphs)
 
     rowsum = array_sum(graph, axis=1).astype(float)
+    rowsum[rowsum == 0] = 1.
 
     if np.all(rowsum == len(graphs)):
         if sps.issparse(graph):
@@ -192,35 +193,6 @@ def _invert_distance_graph(graph):
     else:
 
         np.divide(1, graph, out=graph, where=graph != 0)
-
-        return graph
-
-
-def _invert_distance_magic_graph(graph):
-
-    if sps.issparse(graph):
-
-        rowmean = array_sum(graph, axis=1).astype(float) / graph.shape[1]
-        rowmean[rowmean == 0] = 1.
-
-        _row_divide(graph, rowmean)
-        graph.data *= -1
-        np.exp(graph.data, out=graph.data, where=graph.data != 0)
-
-        set_diag(graph, 0)
-
-        return graph
-
-    else:
-
-        rowmean = graph.mean(axis=1)
-        rowmean[rowmean == 0] = 1.
-
-        graph /= rowmean[:, None]
-        graph *= -1
-        np.exp(graph, out=graph, where=graph != 0)
-
-        set_diag(graph, 0)
 
         return graph
 

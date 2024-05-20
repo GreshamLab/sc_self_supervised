@@ -108,8 +108,9 @@ def mcv(
             metric_arr[i, 0] = np.sum(B.X ** 2) / size
 
         # Calculate metric for 1-n_pcs number of PCs
-        for j in tqdm.trange(1, n_pcs + 1):
-            log(f"Iter #{i}: {j} PCs", level=10)
+        for j in (pbar := tqdm.trange(1, n_pcs + 1)):
+            pbar.set_description(f"{j} PCs")
+
             metric_arr[i, j] = mcv_comp(
                 B.X,
                 A.obsm['X_pca'][:, 0:j],
