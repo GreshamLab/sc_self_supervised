@@ -137,9 +137,9 @@ def multimodal_noise2self(
             # Calculate neighbor graph with the max number of neighbors
             # Faster to select only a subset of edges than to recalculate
             # (obviously)
-            for i in range(_n_modes):
+            for j in range(_n_modes):
                 neighbor_graph(
-                    data_obj[i],
+                    data_obj[j],
                     pc,
                     _max_neighbors,
                     metric=metric,
