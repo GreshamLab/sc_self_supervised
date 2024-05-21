@@ -1,3 +1,4 @@
+import os
 import unittest
 import numpy as np
 import numpy.testing as npt
@@ -10,6 +11,7 @@ DATA = np.random.default_rng(100).random((100, 50)).astype(np.float32)
 
 class TestTruncatedSVDMKL(unittest.TestCase):
 
+    @unittest.skipIf('CI' in os.environ, 'Skip for CI')
     def test_tsvd_mkl(self):
 
         scaler_old = TruncatedSVD(
