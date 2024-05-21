@@ -100,6 +100,9 @@ def multimodal_noise2self(
     for c, p in zip(count_data, pc_data):
         _check_input_data(npcs, c, p)
 
+    if not isinstance(standardization_method, (list, tuple)):
+        standardization_method = [standardization_method] * _n_modes
+
     data_obj = [None] * _n_modes
     expr_data = [None] * _n_modes
 
@@ -107,7 +110,7 @@ def multimodal_noise2self(
 
         data_obj[i], expr_data[i] = _standardize(
             count_data[i],
-            standardization_method
+            standardization_method[i]
         )
 
     log(
@@ -137,14 +140,13 @@ def multimodal_noise2self(
             # Calculate neighbor graph with the max number of neighbors
             # Faster to select only a subset of edges than to recalculate
             # (obviously)
-            for j in range(_n_modes):
-                neighbor_graph(
-                    data_obj[j],
-                    pc,
-                    _max_neighbors,
-                    metric=metric,
-                    random_state=random_state
-                )
+            neighbor_graph(
+                data_obj,
+                pc,
+                _max_neighbors,
+                metric=metric,
+                random_state=random_state
+            )
 
             # Search through the neighbors space
             mses[i, :] = _search_k(
@@ -175,14 +177,13 @@ def multimodal_noise2self(
         op_k = None
 
     # Recalculate a k-NN graph from the optimal # of PCs
-    for i in range(_n_modes):
-        neighbor_graph(
-            data_obj[i],
-            npcs[op_pc],
-            _max_neighbors,
-            metric=metric,
-            random_state=random_state
-        )
+    neighbor_graph(
+        data_obj,
+        npcs[op_pc],
+        _max_neighbors,
+        metric=metric,
+        random_state=random_state
+    )
 
     # Search space for k-neighbors
     local_neighbors = np.arange(

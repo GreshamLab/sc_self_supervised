@@ -152,6 +152,18 @@ def neighbor_graph(adata, pc, k, metric='euclidean', random_state=None):
     Build neighbor graph in an AnnData object
     """
 
+    if isinstance(adata, (list, tuple)):
+        return [
+            neighbor_graph(
+                a,
+                pc,
+                k,
+                metric=metric,
+                random_state=random_state
+            )
+            for a in adata
+        ]
+
     if adata.n_obs < 25000:
 
         adata.obsp['distances'] = NearestNeighbors(
