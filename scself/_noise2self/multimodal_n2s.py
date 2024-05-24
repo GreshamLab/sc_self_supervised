@@ -17,7 +17,7 @@ from .common import (
 
 def multimodal_noise2self(
     count_data,
-    target_data_index=0,
+    target_data_index=None,
     standardization_method=None,
     neighbors=None,
     npcs=None,

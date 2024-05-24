@@ -314,6 +314,7 @@ class TestKNNSearch(_N2SSetup, unittest.TestCase):
             loss=self.loss
         )
 
+        print(mse)
         self.assertEqual(np.argmin(mse), self.correct_mse_argmin)
 
         npt.assert_almost_equal(
@@ -330,6 +331,7 @@ class TestKNNSearch(_N2SSetup, unittest.TestCase):
             loss=self.loss
         )
 
+        print(mse)
         self.assertEqual(np.argmin(mse), self.correct_mse_argmin)
 
         npt.assert_almost_equal(
@@ -387,7 +389,7 @@ class TestKNNSearchNoNorm(TestNoise2Self):
     normalize = None
     data = standardize_data(
         ad.AnnData(EXPR.astype(np.float32))
-    ).X
+    )[0].X
 
 
 class TestKNNSearchLogLoss(TestKNNSearch, TestNoise2Self):

@@ -76,7 +76,7 @@ def mcv(
             level=level
         )
 
-        A = standardize_data(
+        A, a_scale = standardize_data(
             A,
             target_sum=n_counts,
             method=standardization_method
@@ -91,8 +91,9 @@ def mcv(
         B = standardize_data(
             B,
             target_sum=n_counts,
-            method=standardization_method
-        )
+            method=standardization_method,
+            scale_factor=a_scale
+        )[0]
 
         # Calculate PCA
         log(f"Iter #{i}: Initial PCA ({n_pcs} comps)")

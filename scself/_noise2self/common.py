@@ -71,8 +71,19 @@ def _search_k(
     :rtype: np.ndarray
     """
 
-    n, _ = X.shape
+    if isinstance(X, (tuple, list)):
+        n_data = len(X)
+    else:
+        n_data = 1
+        X = [X]
+
+    n, _ = X[0].shape
     n_k = len(k)
+
+    if by_row:
+        mses = np.zeros((n_data, n_k, n))
+    else:
+        mses = np.zeros((n_data, n_k))
 
     if not isinstance(graphs, (list, tuple)):
         raise ValueError(
@@ -81,7 +92,6 @@ def _search_k(
         )
 
     n_modes = len(graphs)
-    mses = np.zeros(n_k) if not by_row else np.zeros((n_k, n))
 
     if pbar:
         rfunc = tqdm.trange
@@ -110,16 +120,20 @@ def _search_k(
             k_graph = combine_row_stochastic_graphs(k_graph)
 
         # Calculate mean squared error
-        mses[i] = _noise_to_self_error(
-            X,
-            k_graph,
-            by_row=by_row,
-            metric=loss,
-            chunk_size=chunk_size,
-            **loss_kwargs
-        )
+        for j in range(n_data):
+            mses[j, i] = _noise_to_self_error(
+                X[j],
+                k_graph,
+                by_row=by_row,
+                metric=loss,
+                chunk_size=chunk_size,
+                **loss_kwargs
+            )
 
-    return mses
+    if n_data == 1:
+        return mses[0, ...]
+    else:
+        return mses
 
 
 def _noise_to_self_error(
@@ -254,7 +268,7 @@ def _standardize(count_data, standardization_method):
     # Keep separate reference to expression data and force float32
     # This way if the expression data is provided it isnt copied
     if standardization_method is not None:
-        data_obj = standardize_data(
+        data_obj, _ = standardize_data(
             ad.AnnData(count_data.astype(np.float32)),
             method=standardization_method
         )
