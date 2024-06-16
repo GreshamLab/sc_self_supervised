@@ -18,6 +18,7 @@ def mcv_r2_per_cell(
     random_seed=800,
     p=0.5,
     standardization_method='log',
+    standardization_kwargs=None,
     zero_center=False,
     silent=False
 ):
@@ -52,6 +53,9 @@ def mcv_r2_per_cell(
     else:
         level = 30
 
+    if standardization_kwargs is None:
+        standardization_kwargs = {}
+
     for i in range(n):
 
         log(
@@ -71,10 +75,13 @@ def mcv_r2_per_cell(
             level=level
         )
 
+        n_counts = standardization_kwargs.pop('target_sum', n_counts)
+
         A, a_scale = standardize_data(
             A,
             target_sum=n_counts,
-            method=standardization_method
+            method=standardization_method,
+            **standardization_kwargs
         )
 
         log(
@@ -87,7 +94,8 @@ def mcv_r2_per_cell(
             B,
             target_sum=n_counts,
             method=standardization_method,
-            scale_factor=a_scale
+            scale_factor=a_scale,
+            **standardization_kwargs
         )[0]
 
         # Calculate PCA
@@ -96,7 +104,7 @@ def mcv_r2_per_cell(
 
         # Null model (no PCs)
 
-        log(f"Iter #{i}: Calculating Metrics", level=level)
+        log(f"Iter #{i}: Calculating Crossvalidation Metrics", level=level)
 
         metric_arr[:, i], r2_arr[:, i] = mcv_comp(
             B.X,

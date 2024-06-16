@@ -21,6 +21,7 @@ def mcv(
     p=0.5,
     metric='mse',
     standardization_method='log',
+    standardization_kwargs=None,
     metric_kwargs={},
     silent=False,
     verbose=None,
@@ -56,6 +57,9 @@ def mcv(
     else:
         level = 30
 
+    if standardization_kwargs is None:
+        standardization_kwargs = {}
+
     # Use a single progress bar for nested loop
     for i in range(n):
 
@@ -70,6 +74,8 @@ def mcv(
             p=p
         )
 
+        n_counts = standardization_kwargs.pop('target_sum', n_counts)
+
         log(
             f"Iter #{i}: Standardizing Train ({standardization_method}) "
             f"{A.shape}",
@@ -79,7 +85,8 @@ def mcv(
         A, a_scale = standardize_data(
             A,
             target_sum=n_counts,
-            method=standardization_method
+            method=standardization_method,
+            **standardization_kwargs
         )
 
         log(
@@ -92,7 +99,8 @@ def mcv(
             B,
             target_sum=n_counts,
             method=standardization_method,
-            scale_factor=a_scale
+            scale_factor=a_scale,
+            **standardization_kwargs
         )[0]
 
         # Calculate PCA
@@ -101,7 +109,7 @@ def mcv(
 
         # Null model (no PCs)
 
-        log(f"Iter #{i}: Crossvalidation", level=10)
+        log(f"Iter #{i}: Calculating Crossvalidation Metrics", level=10)
 
         if sps.issparse(B.X):
             metric_arr[i, 0] = np.sum(B.X.data ** 2) / size
