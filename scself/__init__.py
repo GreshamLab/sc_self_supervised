@@ -16,4 +16,5 @@ from .utils.dot_product import (
     dot,
     sparse_dot_patch
 )
+from .utils import standardize_data
 from ._denoise import denoise_data
