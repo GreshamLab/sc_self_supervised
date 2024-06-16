@@ -2,6 +2,8 @@ import numpy as np
 import scipy.sparse as sps
 import numba
 
+from scself.utils import cast_to_float_inplace
+
 
 def is_csr(x):
     return sps.isspmatrix_csr(x) or isinstance(x, sps.csr_array)
@@ -113,32 +115,26 @@ def sparse_normalize_columns(sparse_array, column_norm_vec):
     )
 
 
-def sparse_normalize_total(sparse_array, target_sum=10_000):
+def sparse_normalize_total(sparse_array, target_sum=10_000, size_factor=None):
 
     if not is_csr(sparse_array):
         raise ValueError("sparse_sum requires a sparse csr_array")
 
-    if sparse_array.data.dtype == np.int32:
-        dtype = np.float32
-    elif sparse_array.data.dtype == np.int64:
-        dtype = np.float64
-    else:
-        dtype = None
+    cast_to_float_inplace(sparse_array.data)
 
-    if dtype is not None:
-        float_view = sparse_array.data.view(dtype)
-        float_view[:] = sparse_array.data
-        sparse_array.data = float_view
+    if size_factor is None:
+        n_counts = sparse_sum(sparse_array, axis=1)
 
-    n_counts = sparse_sum(sparse_array, axis=1)
+        if target_sum is None:
+            target_sum = np.median(n_counts)
 
-    if target_sum is None:
-        target_sum = np.median(n_counts)
+        size_factor = n_counts / target_sum
+        size_factor[n_counts == 0] = 1.
 
     _csr_row_divide(
         sparse_array.data,
         sparse_array.indptr,
-        n_counts / target_sum
+        size_factor
     )
 
 

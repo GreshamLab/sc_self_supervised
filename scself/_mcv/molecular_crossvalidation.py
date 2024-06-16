@@ -101,7 +101,7 @@ def mcv(
 
         # Null model (no PCs)
 
-        log(f"Iter #{i}: 0 PCs", level=10)
+        log(f"Iter #{i}: Crossvalidation", level=10)
 
         if sps.issparse(B.X):
             metric_arr[i, 0] = np.sum(B.X.data ** 2) / size

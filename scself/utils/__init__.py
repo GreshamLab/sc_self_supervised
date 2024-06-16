@@ -13,3 +13,4 @@ from .pairwise_loss import (
 )
 from ._pca import pca
 from .shrink import shrink_array_to_zero_inplace
+from .cast_dtype_inplace import cast_to_float_inplace
