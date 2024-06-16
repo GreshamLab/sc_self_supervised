@@ -7,7 +7,7 @@ import anndata as ad
 from scself import TruncRobustScaler, mcv
 from scself._mcv.common import mcv_comp
 from scself.utils import mcv_mean_error
-from scself.utils.standardization import _normalize_for_pca
+from scself.utils.standardization import _normalize
 
 from ._stubs import (
     COUNTS
@@ -118,7 +118,7 @@ class TestMCVStandardization(unittest.TestCase):
 
     def test_depth(self):
 
-        _normalize_for_pca(self.data, target_sum=100, log=False, scale=False)
+        _normalize(self.data, target_sum=100, log=False, scale=False)
 
         rowsums = _safe_sum(self.data.X, 1)
 
@@ -130,7 +130,7 @@ class TestMCVStandardization(unittest.TestCase):
 
     def test_depth_log(self):
 
-        _normalize_for_pca(self.data, target_sum=100, log=True, scale=False)
+        _normalize(self.data, target_sum=100, log=True, scale=False)
 
         rowsums = _safe_sum(self.data.X, 1)
 
@@ -142,7 +142,7 @@ class TestMCVStandardization(unittest.TestCase):
 
     def test_depth_scale(self):
 
-        _normalize_for_pca(self.data, target_sum=100, log=False, scale=True)
+        _normalize(self.data, target_sum=100, log=False, scale=True)
 
         npt.assert_almost_equal(
             _safe_dense(self.data.X),
@@ -154,7 +154,7 @@ class TestMCVStandardization(unittest.TestCase):
 
     def test_depth_log_scale(self):
 
-        _normalize_for_pca(self.data, target_sum=100, log=True, scale=True)
+        _normalize(self.data, target_sum=100, log=True, scale=True)
 
         npt.assert_almost_equal(
             _safe_dense(self.data.X),
