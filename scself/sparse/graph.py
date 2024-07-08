@@ -13,7 +13,7 @@ except ImportError:
         z = x @ y
 
         if dense and sps.issparse(z):
-            z = z.A
+            z = z.toarray()
 
         if out is not None:
             out[:] = z

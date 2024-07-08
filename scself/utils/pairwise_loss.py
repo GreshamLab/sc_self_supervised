@@ -10,12 +10,12 @@ def _log_loss(x, y, axis=1):
         )
 
     try:
-        x = x.A
+        x = x.toarray()
     except AttributeError:
         pass
 
     try:
-        y = y.A
+        y = y.toarray()
     except AttributeError:
         pass
 

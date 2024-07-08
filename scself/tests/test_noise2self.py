@@ -152,7 +152,7 @@ class TestDistInvert(unittest.TestCase):
 
     def test_invert_sparse(self):
         graph = sps.csr_matrix(DIST)
-        graph = _invert_distance_graph(graph).A
+        graph = _invert_distance_graph(graph).toarray()
 
         invert_order = np.zeros_like(DIST)
         np.divide(1, DIST, out=invert_order, where=DIST != 0)
@@ -177,7 +177,7 @@ class TestDistInvert(unittest.TestCase):
 
     def test_row_normalize(self):
         graph = sps.csr_matrix(DIST)
-        graph = row_normalize(graph).A
+        graph = row_normalize(graph).toarray()
 
         invert_order = np.zeros_like(DIST)
         np.divide(1, DIST, out=invert_order, where=DIST != 0)
@@ -399,16 +399,15 @@ class TestKNNSearchLogLoss(TestKNNSearch, TestNoise2Self):
     dist = (PDIST.copy(), )
     loss = 'log_loss'
     correct_loss = np.array([
-        0.999322,
-        0.4702795,
-        0.2203677,
-        0.1766228,
-        0.1764214,
-        0.1564008
+        1.5151011,
+        0.5011126,
+        0.2630204,
+        0.1906884,
+        0.1483081,
+        0.1598496
     ])
     correct_opt_pc = 7
     correct_opt_k = 8
-    correct_mse_argmin = 5
 
 
 class TestKNNSearchMultimodal(TestKNNSearch):

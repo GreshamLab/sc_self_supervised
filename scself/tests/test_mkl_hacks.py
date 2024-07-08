@@ -3,12 +3,18 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
-from scself.sparse.truncated_svd import TruncatedSVDMKL
+try:
+    from scself.sparse.truncated_svd import TruncatedSVDMKL
+    MKL_SKIP = False
+except ImportError:
+    MKL_SKIP = True
+
 from sklearn.decomposition import TruncatedSVD
 
 DATA = np.random.default_rng(100).random((100, 50)).astype(np.float32)
 
 
+@unittest.skipIf(MKL_SKIP, 'NO MKL')
 class TestTruncatedSVDMKL(unittest.TestCase):
 
     @unittest.skipIf('CI' in os.environ, 'Skip for CI')

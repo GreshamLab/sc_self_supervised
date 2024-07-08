@@ -42,7 +42,7 @@ class TestDenoiser(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
 
-        graph = _knn(3).A
+        graph = _knn(3).toarray()
         graph = np.divide(1, graph, out=graph, where=graph != 0)
         graph /= graph.sum(1)[:, None]
 

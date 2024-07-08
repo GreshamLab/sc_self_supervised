@@ -29,7 +29,7 @@ def _safe_sum(x, axis):
 def _safe_dense(x):
 
     try:
-        return x.A
+        return x.toarray()
     except AttributeError:
         return x
 

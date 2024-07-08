@@ -24,9 +24,9 @@ LOG_SCALE = TruncRobustScaler(with_centering=False).fit(
 def _equal(x, y):
 
     if sps.issparse(x):
-        x = x.A
+        x = x.toarray()
     if sps.issparse(y):
-        y = y.A
+        y = y.toarray()
 
     npt.assert_array_almost_equal(
         x,
