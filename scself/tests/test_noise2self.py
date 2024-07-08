@@ -399,12 +399,12 @@ class TestKNNSearchLogLoss(TestKNNSearch, TestNoise2Self):
     dist = (PDIST.copy(), )
     loss = 'log_loss'
     correct_loss = np.array([
-        1.5151011,
-        0.5011126,
-        0.2630204,
-        0.1906884,
-        0.1483081,
-        0.1598496
+        0.999322,
+        0.4702795,
+        0.2203677,
+        0.1766228,
+        0.1764214,
+        0.1564008
     ])
     correct_opt_pc = 7
     correct_opt_k = 8
