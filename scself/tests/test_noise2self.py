@@ -408,6 +408,7 @@ class TestKNNSearchLogLoss(TestKNNSearch, TestNoise2Self):
     ])
     correct_opt_pc = 7
     correct_opt_k = 8
+    correct_mse_argmin = 5
 
 
 class TestKNNSearchMultimodal(TestKNNSearch):
