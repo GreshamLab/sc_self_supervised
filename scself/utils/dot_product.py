@@ -25,7 +25,7 @@ except ImportError as err:
 
         z = x @ y
 
-        if dense and sps.issparse(z):
+        if sps.issparse(z) and (dense or out is not None):
             z = z.toarray()
 
         if out is not None:
