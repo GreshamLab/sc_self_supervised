@@ -1,25 +1,6 @@
 import numba
 import numpy as np
-import scipy.sparse as sps
-
-
-try:
-    from sparse_dot_mkl import dot_product_mkl as dot
-
-except ImportError:
-
-    def dot(x, y, dense=False, cast=False, out=None):
-
-        z = x @ y
-
-        if dense and sps.issparse(z):
-            z = z.toarray()
-
-        if out is not None:
-            out[:] = z
-            return out
-        else:
-            return z
+from scself.utils.dot_product import dot
 
 
 @numba.njit(parallel=True)
