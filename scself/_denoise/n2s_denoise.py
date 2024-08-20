@@ -97,7 +97,8 @@ def denoise_data(
                     data[i],
                     _graph_chunk,
                     out=_denoised[i][start:end] if dense[i] else None,
-                    zero_threshold=zero_threshold[i]
+                    zero_threshold=zero_threshold[i],
+                    dense=dense[i]
                 )
 
                 if not dense[i]:
