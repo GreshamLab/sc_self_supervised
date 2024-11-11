@@ -2,7 +2,7 @@ import numpy as np
 import tqdm
 
 
-from scself.utils import log, pca
+from scself.utils import log, pca, verbose as _verbose
 from .graph import (
     neighbor_graph,
     local_optimal_knn
@@ -74,6 +74,9 @@ def multimodal_noise2self(
         local optimal k for each observation
     :rtype: sp.sparse.csr_matrix, int, int, np.ndarray [int]
     """
+
+    if verbose is not None:
+        _verbose(verbose)
 
     neighbors, npcs = _check_args(
         neighbors,
