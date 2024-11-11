@@ -124,7 +124,7 @@ def multimodal_noise2self(
             data_obj[i].obsm['X_pca'] = pc_data[i]
 
         else:
-            pca(data_obj[i], expr_data[i], np.max(npcs))
+            pca(data_obj[i], np.max(npcs))
 
     mses = np.zeros((len(npcs), len(neighbors)))
 
