@@ -58,7 +58,7 @@ class TruncStandardScaler(StandardScaler):
 
 class TruncMinMaxScaler(MinMaxScaler):
 
-    def __init__(self, feature_range=(0, 1), quantile_range=0.99, *, copy=True, clip=False):
+    def __init__(self, feature_range=(0, 1), quantile_range=(0.01, 0.99), *, copy=True, clip=False):
         self.feature_range = feature_range
         self.quantile_range = quantile_range
         self.copy = copy
@@ -66,20 +66,42 @@ class TruncMinMaxScaler(MinMaxScaler):
 
     def fit(self, X, y=None):
 
-        super().fit(X, y)
+        _bottom_quantile = None
 
-        self.data_min_ = 0
-        self.data_max_ = np.nanquantile(
-            X, self.quantile_range, axis=0, method='lower'
+        if isinstance(self.quantile_range, (tuple, list)):
+            if len(self.quantile_range) > 2:
+                raise ValueError(
+                    "quantile_range must have at most 2 values; "
+                    f"{self.quantile_range} passed"
+                )
+            elif len(self.quantile_range) == 1:
+                _top_quantile = self.quantile_range[0]
+            else:
+                _bottom_quantile, _top_quantile = self.quantile_range
+        else:
+            _top_quantile = self.quantile_range
+
+        if _bottom_quantile is None:
+            data_min_ = np.nanmin(X, axis=0)
+        else:
+            data_min_ = np.nanquantile(
+                X, _bottom_quantile, axis=0, method='lower'
+            )
+
+        data_max_ = np.nanquantile(
+            X, _top_quantile, axis=0, method='higher'
         )
-        self.data_range_ = self.data_max_ - self.data_min_
+        data_range_ = data_max_ - data_min_
 
-        _fixed_range = self.data_range_.copy()
+        _fixed_range = data_range_.copy()
         _fixed_range[_fixed_range == 0] = 1.
 
         self.scale_ = self.feature_range[1] - self.feature_range[0]
         self.scale_ /= _fixed_range
+        self.min_ = self.feature_range[0] - data_min_ * self.scale_
 
-        self.min_ = self.feature_range[0]
+        self.data_max_ = data_max_
+        self.data_min_ = data_min_
+        self.data_range_ = data_range_
 
         return self

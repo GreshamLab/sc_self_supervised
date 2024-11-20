@@ -218,7 +218,7 @@ class TestMinMaxScaling(unittest.TestCase):
             self.data.X[:, i] = np.clip(
                 self.data.X[:, i],
                 0,
-                np.nanquantile(self.data.X[:, i], 0.8)
+                np.nanquantile(self.data.X[:, i], 0.8, method='higher')
             )
 
         npt.assert_equal(
@@ -235,6 +235,37 @@ class TestMinMaxScaling(unittest.TestCase):
             scaler.transform(X),
             other_scaler.transform(self.data.X)
         )
+
+
+    def test_scale_trunc_twoside(self):
+
+        scaler = TruncMinMaxScaler(quantile_range=(0.2, 0.8)).fit(X)
+
+        self.assertEqual(X.shape[1], scaler.scale_.shape[0])
+        self.assertEqual(X.shape[1], scaler.min_.shape[0])
+
+        for i in range(X.shape[1]):
+            self.data.X[:, i] = np.clip(
+                self.data.X[:, i],
+                np.nanquantile(self.data.X[:, i], 0.2, method='lower'),
+                np.nanquantile(self.data.X[:, i], 0.8, method='higher')
+            )
+
+        npt.assert_equal(
+            np.max(self.data.X, axis=0) - np.min(self.data.X, axis=0),
+            scaler.data_range_
+        )
+
+        other_scaler = MinMaxScaler().fit(self.data.X)
+
+        npt.assert_almost_equal(scaler.min_, other_scaler.min_)
+        npt.assert_almost_equal(scaler.scale_, other_scaler.scale_)
+
+        npt.assert_almost_equal(
+            scaler.transform(X),
+            other_scaler.transform(self.data.X)
+        )
+
 
 
 class TestScalingCSR(TestScalingDense):
