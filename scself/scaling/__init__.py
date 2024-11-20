@@ -1,4 +1,5 @@
 from .truncscaler import (
     TruncRobustScaler,
-    TruncStandardScaler
+    TruncStandardScaler,
+    TruncMinMaxScaler
 )

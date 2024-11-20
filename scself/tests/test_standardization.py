@@ -3,9 +3,10 @@ import numpy as np
 import numpy.testing as npt
 import anndata as ad
 import scipy.sparse as sps
+from sklearn.preprocessing import MinMaxScaler
 
 from scself.utils import standardize_data
-from scself import TruncRobustScaler
+from scself import TruncRobustScaler, TruncMinMaxScaler
 
 X = np.random.default_rng(100).integers(0, 5, (100, 20))
 
@@ -186,6 +187,53 @@ class TestScalingDense(unittest.TestCase):
         _equal(
             X[:, 0:3].sum(1),
             self.data.obs['X_subset_counts'].values
+        )
+
+
+class TestMinMaxScaling(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.data = ad.AnnData(X.copy())
+        return super().setUp()
+    
+    def test_scale_no_trunc(self):
+
+        scaler = TruncMinMaxScaler(quantile_range=1.0).fit(X)
+        other_scaler = MinMaxScaler().fit(X)
+
+        npt.assert_almost_equal(scaler.scale_, other_scaler.scale_)
+        npt.assert_almost_equal(scaler.min_, other_scaler.min_)
+
+        npt.assert_almost_equal(
+            scaler.transform(X),
+            other_scaler.transform(X)
+        )
+
+
+    def test_scale_trunc(self):
+
+        scaler = TruncMinMaxScaler(quantile_range=0.8).fit(X)
+
+        for i in range(X.shape[1]):
+            self.data.X[:, i] = np.clip(
+                self.data.X[:, i],
+                0,
+                np.nanquantile(self.data.X[:, i], 0.8)
+            )
+
+        npt.assert_equal(
+            np.max(self.data.X, axis=0),
+            scaler.data_range_
+        )
+
+        other_scaler = MinMaxScaler().fit(self.data.X)
+
+        npt.assert_almost_equal(scaler.min_, other_scaler.min_)
+        npt.assert_almost_equal(scaler.scale_, other_scaler.scale_)
+
+        npt.assert_almost_equal(
+            scaler.transform(X),
+            other_scaler.transform(self.data.X)
         )
 
 

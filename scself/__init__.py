@@ -10,7 +10,8 @@ from ._noise2self import (
 )
 from .scaling import (
     TruncRobustScaler,
-    TruncStandardScaler
+    TruncStandardScaler,
+    TruncMinMaxScaler
 )
 from .utils.dot_product import (
     dot,

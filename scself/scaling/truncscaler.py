@@ -70,7 +70,7 @@ class TruncMinMaxScaler(MinMaxScaler):
 
         self.data_min_ = 0
         self.data_max_ = np.nanquantile(
-            X, self.quantile_range, axis=0
+            X, self.quantile_range, axis=0, method='lower'
         )
         self.data_range_ = self.data_max_ - self.data_min_
 
@@ -81,3 +81,5 @@ class TruncMinMaxScaler(MinMaxScaler):
         self.scale_ /= _fixed_range
 
         self.min_ = self.feature_range[0]
+
+        return self
