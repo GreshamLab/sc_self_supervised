@@ -58,39 +58,72 @@ class TruncStandardScaler(StandardScaler):
 
 class TruncMinMaxScaler(MinMaxScaler):
 
-    def __init__(self, feature_range=(0, 1), quantile_range=(0.01, 0.99), *, copy=True, clip=False):
+    def __init__(
+        self,
+        feature_range=(0, 1),
+        quantile_range=(0.01, 0.99),
+        clipping_range=None,
+        *,
+        copy=True,
+        clip=False
+    ):
+        if (
+            quantile_range is not None and
+            clipping_range is not None
+        ):
+            raise ValueError(
+                "Provide quantile_range or clipping_range, not both"
+            )
+
         self.feature_range = feature_range
         self.quantile_range = quantile_range
+        self.clipping_range = clipping_range
         self.copy = copy
         self.clip = True
 
     def fit(self, X, y=None):
 
-        _bottom_quantile = None
 
-        if isinstance(self.quantile_range, (tuple, list)):
-            if len(self.quantile_range) > 2:
-                raise ValueError(
-                    "quantile_range must have at most 2 values; "
-                    f"{self.quantile_range} passed"
-                )
-            elif len(self.quantile_range) == 1:
-                _top_quantile = self.quantile_range[0]
+        # If there's no truncation ranges
+        # just run MinMaxScaler
+        if (
+            self.quantile_range is None and
+            self.clipping_range is None
+        ):
+            return super().fit(X, y)
+
+        # Get the data_min and data_max for
+        # truncation ranges given as quantiles
+        elif self.quantile_range is not None:
+
+            _bottom_quantile, _top_quantile = self.quantile_range
+
+            if _bottom_quantile is None or (_bottom_quantile == 0.):
+                data_min_ = np.nanmin(X, axis=0)
             else:
-                _bottom_quantile, _top_quantile = self.quantile_range
-        else:
-            _top_quantile = self.quantile_range
+                data_min_ = np.nanquantile(
+                    X, _bottom_quantile, axis=0, method='lower'
+                )
+    
+            if _top_quantile is None or (_bottom_quantile == 1.):
+                data_min_ = np.nanmax(X, axis=0)
+            else:
+                data_max_ = np.nanquantile(
+                    X, _top_quantile, axis=0, method='higher'
+                )
+        
+        # Set data_min and data_max if truncation range
+        # is given as raw values
+        elif self.clipping_range is not None:
+            n = X.shape[1]
+            print(_to_array(self.clipping_range, n))
+            data_min_, data_max_ = _to_array(self.clipping_range, n)
 
-        if _bottom_quantile is None:
-            data_min_ = np.nanmin(X, axis=0)
         else:
-            data_min_ = np.nanquantile(
-                X, _bottom_quantile, axis=0, method='lower'
+            raise ValueError(
+                "quantile_range and clipping_range cannot both be None"
             )
 
-        data_max_ = np.nanquantile(
-            X, _top_quantile, axis=0, method='higher'
-        )
         data_range_ = data_max_ - data_min_
 
         _fixed_range = data_range_.copy()
@@ -105,3 +138,13 @@ class TruncMinMaxScaler(MinMaxScaler):
         self.data_range_ = data_range_
 
         return self
+
+
+def _to_array(x, n):
+
+    if isinstance(x, (tuple, list)):
+        return tuple(_to_array(y, n) for y in x)
+    elif not isinstance(x, np.ndarray):
+        return np.repeat(x, n)
+    else:
+        return x
