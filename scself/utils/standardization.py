@@ -322,7 +322,8 @@ def _size_factors_stratified(
 
         # Get the medians based on grouping the categories
         target_sum = size_factor.groupby(
-            stratification_col
+            stratification_col,
+            observed=True
         ).agg('median')
         
         try:
