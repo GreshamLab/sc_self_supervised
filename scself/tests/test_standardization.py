@@ -40,6 +40,8 @@ class TestScalingDense(unittest.TestCase):
     def setUp(self) -> None:
         self.data = ad.AnnData(X.copy())
         self.data.layers['a'] = X.copy()
+        self.data.obs['strat'] = ['A', 'B'] * 50
+
         return super().setUp()
 
     def test_depth(self):
@@ -51,6 +53,21 @@ class TestScalingDense(unittest.TestCase):
         )
         _equal(
             SF,
+            self.data.obs['X_size_factor'].values
+        )
+
+    def test_depth_cap(self):
+
+        standardize_data(self.data, target_sum=50, method='depth', size_factor_cap=1)
+
+        _sf = np.clip(SF, 1, None)
+
+        _equal(
+            np.divide(X, _sf[:, None]),
+            self.data.X
+        )
+        _equal(
+            _sf,
             self.data.obs['X_size_factor'].values
         )
 
@@ -67,6 +84,67 @@ class TestScalingDense(unittest.TestCase):
         )
         _equal(
             np.ones_like(SF),
+            self.data.obs['X_size_factor'].values
+        )
+
+    def test_depth_stratified_equal(self):
+
+        standardize_data(
+            self.data,
+            target_sum={'A': 50, 'B': 50},
+            stratification_column='strat',
+            method='depth'
+        )
+        _equal(
+            np.divide(X, SF[:, None]),
+            self.data.X
+        )
+        _equal(
+            SF,
+            self.data.obs['X_size_factor'].values
+        )
+
+
+    def test_depth_stratified_unequal(self):
+
+        standardize_data(
+            self.data,
+            target_sum={'A': 50, 'B': 25},
+            stratification_column='strat',
+            method='depth'
+        )
+
+        _sf = COUNT / np.tile([50, 25], 50) 
+
+        _equal(
+            np.divide(X, _sf[:, None]),
+            self.data.X
+        )
+        _equal(
+            _sf,
+            self.data.obs['X_size_factor'].values
+        )
+
+
+    def test_depth_stratified(self):
+
+        standardize_data(
+            self.data,
+            stratification_column='strat',
+            method='depth'
+        )
+
+        _sf = COUNT / np.tile(
+            [np.median(COUNT[::2]), np.median(COUNT[1::2])],
+            50
+        ) 
+
+        _equal(
+            np.divide(X, _sf[:, None]),
+            self.data.X
+        )
+        _equal(
+            _sf,
             self.data.obs['X_size_factor'].values
         )
 
@@ -302,6 +380,7 @@ class TestScalingCSR(TestScalingDense):
     def setUp(self) -> None:
         self.data = ad.AnnData(sps.csr_matrix(X))
         self.data.layers['a'] = sps.csr_matrix(X)
+        self.data.obs['strat'] = ['A', 'B'] * 50
 
 
 class TestScalingCSC(TestScalingDense):
@@ -309,3 +388,4 @@ class TestScalingCSC(TestScalingDense):
     def setUp(self) -> None:
         self.data = ad.AnnData(sps.csc_matrix(X))
         self.data.layers['a'] = sps.csc_matrix(X)
+        self.data.obs['strat'] = ['A', 'B'] * 50

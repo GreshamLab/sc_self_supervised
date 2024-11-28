@@ -1,5 +1,6 @@
 import warnings
 import numpy as np
+import pandas as pd
 import scipy.sparse as sps
 
 from scself.sparse import is_csr
@@ -16,6 +17,8 @@ def _normalize(
     scale_factor=None,
     size_factor=None,
     subset_genes_for_depth=None,
+    stratification_column=None,
+    size_factor_cap=None,
     layer='X'
 ):
     """
@@ -28,25 +31,42 @@ def _normalize(
     :rtype: np.ad.AnnData
     """
 
-    if target_sum is not None and size_factor is not None:
+    if (
+        (
+        target_sum is not None or
+        stratification_column is not None or
+        size_factor_cap is not None
+        )
+        and size_factor is not None
+    ):
         warnings.warn(
-            "target_sum has no effect when size_factor is passed"
+            "target_sum, stratification_column, and size_factor_cap "
+            "have no effect when size_factor is passed"
         )
 
     lref = _get_layer(count_data, layer)
 
     if subset_genes_for_depth is not None and size_factor is None:
-        sub_counts, size_factor = _size_factors(
+
+        sub_counts, size_factor = size_factors(
             _get_layer(count_data[:, subset_genes_for_depth], layer),
-            target_sum=target_sum
+            target_sum=target_sum,
+            adata=count_data,
+            stratification_col=stratification_column,
+            size_factor_cap=size_factor_cap
         )
         counts = array_sum(lref, 1)
         count_data.obs[f'{layer}_subset_counts'] = sub_counts
+
     elif size_factor is None:
-        counts, size_factor = _size_factors(
+        counts, size_factor = size_factors(
             lref,
-            target_sum=target_sum
+            target_sum=target_sum,
+            adata=count_data,
+            stratification_col=stratification_column,
+            size_factor_cap=size_factor_cap
         )
+
     else:
         counts = array_sum(lref, 1)
 
@@ -110,7 +130,9 @@ def _normalize(
     count_data.uns['standardization'] = {
         'log': log,
         'scale': scale,
-        'target_sum': target_sum
+        'target_sum': target_sum,
+        'stratification_column': stratification_column,
+        'size_factor_cap': size_factor_cap
     }
 
     return count_data, scale_factor
@@ -123,6 +145,8 @@ def standardize_data(
     scale_factor=None,
     size_factor=None,
     subset_genes_for_depth=None,
+    stratification_column=None,
+    size_factor_cap=None,
     layer='X'
 ):
     """
@@ -160,7 +184,9 @@ def standardize_data(
             log=True,
             size_factor=size_factor,
             subset_genes_for_depth=subset_genes_for_depth,
-            layer=layer
+            layer=layer,
+            size_factor_cap=size_factor_cap,
+            stratification_column=stratification_column
         )
     elif method == 'scale':
         return _normalize(
@@ -170,7 +196,9 @@ def standardize_data(
             scale_factor=scale_factor,
             size_factor=size_factor,
             subset_genes_for_depth=subset_genes_for_depth,
-            layer=layer
+            layer=layer,
+            size_factor_cap=size_factor_cap,
+            stratification_column=stratification_column
         )
     elif method == 'log_scale':
         return _normalize(
@@ -181,7 +209,9 @@ def standardize_data(
             scale_factor=scale_factor,
             size_factor=size_factor,
             subset_genes_for_depth=subset_genes_for_depth,
-            layer=layer
+            layer=layer,
+            size_factor_cap=size_factor_cap,
+            stratification_column=stratification_column
         )
     elif method == 'depth':
         return _normalize(
@@ -189,7 +219,9 @@ def standardize_data(
             target_sum=target_sum,
             size_factor=size_factor,
             subset_genes_for_depth=subset_genes_for_depth,
-            layer=layer
+            layer=layer,
+            size_factor_cap=size_factor_cap,
+            stratification_column=stratification_column
         )
     elif method is None:
         return count_data, None
@@ -207,7 +239,7 @@ def _normalize_total(
 ):
 
     if size_factor is None:
-        _, size_factor = _size_factors(data, target_sum=target_sum)
+        _, size_factor = _size_factors_all(data, target_sum=target_sum)
 
     if sps.issparse(data):
         return data.multiply((1/size_factor)[:, None])
@@ -216,7 +248,53 @@ def _normalize_total(
         return np.divide(data, size_factor[:, None], out=data)
 
 
-def _size_factors(data, target_sum=None):
+def size_factors(
+    data,
+    target_sum,
+    adata=None,
+    stratification_col=None,
+    size_factor_cap=None
+):
+    
+    if stratification_col is None:
+
+        sf = _size_factors_all(
+            data,
+            target_sum
+        )
+
+    elif adata is not None and stratification_col is not None:
+
+        if (
+            target_sum is not None and
+            not isinstance(target_sum, (dict, pd.Series))
+        ):
+            raise ValueError(
+                "target_sum must be a dict or pd.Series "
+                "keying categories to the target depth "
+                "if stratification_col is not None"
+            )
+
+        sf =  _size_factors_stratified(
+            data,
+            adata,
+            stratification_col,
+            target_sum=target_sum
+        )
+    
+    else:
+        raise ValueError("provide both adata and stratification_col")
+
+    if size_factor_cap is not None:
+        np.clip(sf[1], size_factor_cap, None, out=sf[1])
+    
+    return sf
+
+
+def _size_factors_all(
+    data,
+    target_sum=None,
+):
     counts = array_sum(data, 1)
 
     if target_sum is None:
@@ -226,6 +304,46 @@ def _size_factors(data, target_sum=None):
     size_factor[counts == 0] = 1.
 
     return counts, size_factor
+
+
+def _size_factors_stratified(
+    data,
+    adata,
+    stratification_col,
+    target_sum=None
+):
+    
+    counts = array_sum(data, 1)
+
+    size_factor = adata.obs[[stratification_col]].copy()
+    size_factor['counts'] = counts
+
+    if target_sum is None:
+
+        # Get the medians based on grouping the categories
+        target_sum = size_factor.groupby(
+            stratification_col
+        ).agg('median')
+        
+        try:
+            target_sum = target_sum.to_frame()
+        except AttributeError:
+            pass
+
+        target_sum = target_sum.rename(
+            {'counts': 'medians'},
+            axis=1
+        )
+
+    else:
+        target_sum = pd.Series(target_sum).rename('medians')
+
+    # Join the counts to the target sums and calculate the size factors
+    size_factor = size_factor.join(target_sum, on=stratification_col)
+    size_factor = size_factor['counts'] / size_factor['medians']
+    size_factor[size_factor == 0] = 1.0
+
+    return counts, size_factor.values
 
 
 def log1p(data):
