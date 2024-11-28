@@ -107,6 +107,12 @@ def _normalize(
     else:
         scale_factor = None
 
+    count_data.uns['standardization'] = {
+        'log': log,
+        'scale': scale,
+        'target_sum': target_sum
+    }
+
     return count_data, scale_factor
 
 

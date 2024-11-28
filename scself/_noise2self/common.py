@@ -268,10 +268,18 @@ def _standardize(count_data, standardization_method):
     # Keep separate reference to expression data and force float32
     # This way if the expression data is provided it isnt copied
     if standardization_method is not None:
-        data_obj, _ = standardize_data(
-            ad.AnnData(count_data.astype(np.float32)),
-            method=standardization_method
-        )
+
+        try:
+            data_obj = standardization_method(
+                ad.AnnData(count_data.astype(np.float32))
+            )
+
+        except TypeError:
+            data_obj, _ = standardize_data(
+                ad.AnnData(count_data.astype(np.float32)),
+                method=standardization_method
+            )
+
         expr_data = data_obj.X
 
     else:
