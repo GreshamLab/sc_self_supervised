@@ -26,7 +26,6 @@ def get_correlation_modules(
     layer='X',
     n_neighbors=10,
     leiden_kwargs={},
-    reorder_genes=True,
     output_key='gene_module'
 ):
     """
@@ -56,38 +55,12 @@ def get_correlation_modules(
 
     lref = adata.X if layer == 'X' else adata.layers[layer]
 
-    adata.varp[f'{layer}_corrcoef'] = corrcoef(lref)
+    adata.varm[f'{layer}_corrcoef'] = corrcoef(lref)
 
-    corrs_dists = adata.varp[f'{layer}_corrcoef'] * -1
-    corrs_dists += 1
-
-    if reorder_genes:
-        # Order by hclust on correlation distance
-        corr_order = np.array(
-            dendrogram(
-                linkage(
-                    squareform(corrs_dists, checks=False),
-                    method="average"
-                ),
-                no_plot=True
-            )["leaves"]
-        )
-
-        corr_dist_adata = ad.AnnData(
-            corrs_dists[corr_order, :][:, corr_order],
-            var=pd.DataFrame(index=adata.var_names[corr_order]),
-            obs=pd.DataFrame(index=adata.var_names[corr_order])
-        )
-
-    else:
-        corr_dist_adata = ad.AnnData(
-            corrs_dists,
-            var=pd.DataFrame(index=adata.var_names),
-            obs=pd.DataFrame(index=adata.var_names)
-        )
-
-    corr_dist_adata.var = corr_dist_adata.var.join(
-        adata.var
+    corr_dist_adata = ad.AnnData(
+        1 - adata.varm[f'{layer}_corrcoef'],
+        var=pd.DataFrame(index=adata.var_names),
+        obs=pd.DataFrame(index=adata.var_names)
     )
 
     # Build kNN and get modules by graph clustering
@@ -102,18 +75,15 @@ def get_correlation_modules(
     sc.tl.umap(corr_dist_adata)
     sc.tl.leiden(corr_dist_adata, **leiden_kwargs)
 
-    corr_dist_adata.obs['leiden'] = corr_dist_adata.obs['leiden'].astype(
+    adata.var[output_key] = corr_dist_adata.obs['leiden'].astype(
         int
     ).astype(
         'category'
     )
 
-    corr_dist_adata.obs[output_key] = corr_dist_adata.obs['leiden']
-    corr_dist_adata.var[output_key] = corr_dist_adata.obs['leiden']
+    adata.varm[f'{layer}_umap'] = corr_dist_adata.obsm['X_umap']
 
-    adata.var = adata.var.join(corr_dist_adata.var[[output_key]])
-
-    return corr_dist_adata
+    return adata
 
 
 def module_score(
