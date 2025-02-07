@@ -154,7 +154,9 @@ def _normalize(
         'scale': scale,
         'target_sum': target_sum,
         'stratification_column': stratification_column,
-        'size_factor_cap': size_factor_cap
+        'size_factor_cap': size_factor_cap,
+        'depth_by_sampling': depth_by_sampling,
+        'random_state': random_state
     }
 
     return count_data, scale_factor
@@ -308,6 +310,7 @@ def _normalize_by_sampling(
             )
         
         data.eliminate_zeros()
+        cast_to_float_inplace(data.data)
 
     elif sps.issparse(data):
         raise RuntimeError("For sampling in place, data must be CSR or dense")
@@ -324,6 +327,8 @@ def _normalize_by_sampling(
                 ),
                 minlength=data.shape[1]
             )
+
+        cast_to_float_inplace(data)
 
 
 def size_factors(
