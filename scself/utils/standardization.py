@@ -19,7 +19,9 @@ def _normalize(
     subset_genes_for_depth=None,
     stratification_column=None,
     size_factor_cap=None,
-    layer='X'
+    depth_by_sampling=False,
+    layer='X',
+    random_state=100
 ):
     """
     Depth normalize and log pseudocount
@@ -44,11 +46,23 @@ def _normalize(
             "have no effect when size_factor is passed"
         )
 
+    if (
+        (
+        size_factor is not None or
+        size_factor_cap is not None
+        )
+        and depth_by_sampling
+    ):
+        warnings.warn(
+            "size_factor and size_factor_cap "
+            "have no effect when depth_by_sampling is True"
+        )
+
     lref = _get_layer(count_data, layer)
 
     if subset_genes_for_depth is not None and size_factor is None:
 
-        sub_counts, size_factor = size_factors(
+        sub_counts, size_factor, target_sum = size_factors(
             _get_layer(count_data[:, subset_genes_for_depth], layer),
             target_sum=target_sum,
             adata=count_data,
@@ -59,7 +73,7 @@ def _normalize(
         count_data.obs[f'{layer}_subset_counts'] = sub_counts
 
     elif size_factor is None:
-        counts, size_factor = size_factors(
+        counts, size_factor, target_sum = size_factors(
             lref,
             target_sum=target_sum,
             adata=count_data,
@@ -72,8 +86,16 @@ def _normalize(
 
     count_data.obs[f'{layer}_counts'] = counts
     count_data.obs[f'{layer}_size_factor'] = size_factor
+    count_data.obs[f'{layer}_target_sum'] = target_sum
 
-    if is_csr(lref):
+    if depth_by_sampling:
+        _normalize_by_sampling(
+            lref,
+            target_sum=target_sum,
+            random_state=random_state
+        )
+
+    elif is_csr(lref):
         from ..sparse.math import sparse_normalize_total
         sparse_normalize_total(
             lref,
@@ -147,6 +169,8 @@ def standardize_data(
     subset_genes_for_depth=None,
     stratification_column=None,
     size_factor_cap=None,
+    depth_by_sampling=False,
+    random_state=100,
     layer='X'
 ):
     """
@@ -186,7 +210,9 @@ def standardize_data(
             subset_genes_for_depth=subset_genes_for_depth,
             layer=layer,
             size_factor_cap=size_factor_cap,
-            stratification_column=stratification_column
+            stratification_column=stratification_column,
+            depth_by_sampling=depth_by_sampling,
+            random_state=random_state
         )
     elif method == 'scale':
         return _normalize(
@@ -198,7 +224,9 @@ def standardize_data(
             subset_genes_for_depth=subset_genes_for_depth,
             layer=layer,
             size_factor_cap=size_factor_cap,
-            stratification_column=stratification_column
+            stratification_column=stratification_column,
+            depth_by_sampling=depth_by_sampling,
+            random_state=random_state
         )
     elif method == 'log_scale':
         return _normalize(
@@ -211,7 +239,9 @@ def standardize_data(
             subset_genes_for_depth=subset_genes_for_depth,
             layer=layer,
             size_factor_cap=size_factor_cap,
-            stratification_column=stratification_column
+            stratification_column=stratification_column,
+            depth_by_sampling=depth_by_sampling,
+            random_state=random_state
         )
     elif method == 'depth':
         return _normalize(
@@ -221,7 +251,9 @@ def standardize_data(
             subset_genes_for_depth=subset_genes_for_depth,
             layer=layer,
             size_factor_cap=size_factor_cap,
-            stratification_column=stratification_column
+            stratification_column=stratification_column,
+            depth_by_sampling=depth_by_sampling,
+            random_state=random_state
         )
     elif method is None:
         return count_data, None
@@ -246,6 +278,52 @@ def _normalize_total(
     else:
         cast_to_float_inplace(data)
         return np.divide(data, size_factor[:, None], out=data)
+
+
+def _normalize_by_sampling(
+    data,
+    target_sum,
+    random_state=100
+):
+
+    rng = np.random.default_rng(random_state)
+
+    if not isinstance(target_sum, (np.ndarray, list, tuple)):
+        target_sum = np.full(data.shape[0], target_sum, dtype=int)
+
+    if is_csr(data):
+        for row in range(data.shape[0]):
+            _ind = data.indices[data.indptr[row]:data.indptr[row + 1]]
+            _data = data.data[data.indptr[row]:data.indptr[row + 1]]
+            _p = _data / _data.sum()
+
+            _data[:] = np.bincount(
+                rng.choice(
+                    np.arange(_ind.shape[0]),
+                    size=target_sum[row],
+                    replace=True,
+                    p=_p
+                ),
+                minlength=_ind.shape[0]
+            )
+        
+        data.eliminate_zeros()
+
+    elif sps.issparse(data):
+        raise RuntimeError("For sampling in place, data must be CSR or dense")
+    else:
+        for row in range(data.shape[0]):
+            _p = data[row] / data[row].sum()
+
+            data[row, :] = np.bincount(
+                rng.choice(
+                    np.arange(data.shape[1]),
+                    size=target_sum[row],
+                    replace=True,
+                    p=_p
+                ),
+                minlength=data.shape[1]
+            )
 
 
 def size_factors(
@@ -303,7 +381,7 @@ def _size_factors_all(
     size_factor = counts / target_sum
     size_factor[counts == 0] = 1.
 
-    return counts, size_factor
+    return counts, size_factor, target_sum
 
 
 def _size_factors_stratified(
@@ -341,10 +419,12 @@ def _size_factors_stratified(
 
     # Join the counts to the target sums and calculate the size factors
     size_factor = size_factor.join(target_sum, on=stratification_col)
+    target_sum = size_factor['medians'].values.astype(int)
+
     size_factor = size_factor['counts'] / size_factor['medians']
     size_factor[size_factor == 0] = 1.0
 
-    return counts, size_factor.values
+    return counts, size_factor.values, target_sum
 
 
 def log1p(data):

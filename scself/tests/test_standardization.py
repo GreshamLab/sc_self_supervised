@@ -5,7 +5,7 @@ import anndata as ad
 import scipy.sparse as sps
 from sklearn.preprocessing import MinMaxScaler
 
-from scself.utils import standardize_data
+from scself.utils import standardize_data, array_sum
 from scself import TruncRobustScaler, TruncMinMaxScaler
 
 X = np.random.default_rng(100).integers(0, 5, (100, 20))
@@ -104,6 +104,23 @@ class TestScalingDense(unittest.TestCase):
             self.data.obs['X_size_factor'].values
         )
 
+    def test_depth_stratified_equal_sampling(self):
+
+        standardize_data(
+            self.data,
+            target_sum={'A': 50, 'B': 50},
+            stratification_column='strat',
+            method='depth',
+            depth_by_sampling=True
+        )
+        _equal(
+            np.full(self.data.shape[0], 50),
+            array_sum(self.data.X, 1)
+        )
+        _equal(
+            SF,
+            self.data.obs['X_size_factor'].values
+        )
 
     def test_depth_stratified_unequal(self):
 
@@ -125,6 +142,23 @@ class TestScalingDense(unittest.TestCase):
             self.data.obs['X_size_factor'].values
         )
 
+    def test_depth_stratified_unequal_sampling(self):
+
+        standardize_data(
+            self.data,
+            target_sum={'A': 50, 'B': 25},
+            stratification_column='strat',
+            method='depth',
+            depth_by_sampling=True
+        )
+        _equal(
+            np.tile([50, 25], 50),
+            array_sum(self.data.X, 1)
+        )
+        _equal(
+            COUNT / np.tile([50, 25], 50) ,
+            self.data.obs['X_size_factor'].values
+        )
 
     def test_depth_stratified(self):
 
@@ -145,6 +179,26 @@ class TestScalingDense(unittest.TestCase):
         )
         _equal(
             _sf,
+            self.data.obs['X_size_factor'].values
+        )
+
+    def test_depth_stratified_sampling(self):
+
+        standardize_data(
+            self.data,
+            stratification_column='strat',
+            method='depth',
+            depth_by_sampling=True
+        )
+
+        _targets = [np.median(COUNT[::2]), np.median(COUNT[1::2])]
+
+        _equal(
+            np.tile(_targets, 50),
+            array_sum(self.data.X, 1)
+        )
+        _equal(
+            COUNT / np.tile(_targets, 50),
             self.data.obs['X_size_factor'].values
         )
 
@@ -389,3 +443,15 @@ class TestScalingCSC(TestScalingDense):
         self.data = ad.AnnData(sps.csc_matrix(X))
         self.data.layers['a'] = sps.csc_matrix(X)
         self.data.obs['strat'] = ['A', 'B'] * 50
+
+    @unittest.skip
+    def test_depth_stratified_equal_sampling(self):
+        pass
+
+    @unittest.skip
+    def test_depth_stratified_unequal_sampling(self):
+        pass
+
+    @unittest.skip
+    def test_depth_stratified_sampling(self):
+        pass
