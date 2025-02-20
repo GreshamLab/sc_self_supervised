@@ -44,21 +44,30 @@ def get_correlation_modules(
     :type n_neighbors: int, optional
     :param leiden_kwargs: Keyword arguments to sc.tl.leiden
     :type leiden_kwargs: dict, optional
-    :param reorder_genes: Reorder returned object for plotting,
-        by heirarchial clustering, defaults to True
-    :type reorder_genes: bool, optional    
-    :return: A [genes x genes] AnnData object with
-        correlation distance in .X and gene modules in
-        .obs[output_key].
+    :param output_key: Column to add to adata.var with module IDs,
+        defaults to 'gene_module'
+    :type output_key: str, optional
+
+    :return: The original adata object with:
+        Gene correlations in 'X_corrcoef' in .varp
+        Gene-gene correlation UMAP in 'X_umap' in .varm
+        Module membership IDs in .var[output_key]
     :rtype: ad.AnnData
     """
 
     lref = adata.X if layer == 'X' else adata.layers[layer]
 
-    adata.varm[f'{layer}_corrcoef'] = corrcoef(lref)
+    try:
+        lref = lref.toarray()
+    except AttributeError:
+        pass
+
+    adata.varp[f'{layer}_corrcoef'] = corrcoef(lref)
+
+    del lref
 
     corr_dist_adata = ad.AnnData(
-        1 - adata.varm[f'{layer}_corrcoef'],
+        1 - adata.varp[f'{layer}_corrcoef'],
         var=pd.DataFrame(index=adata.var_names),
         obs=pd.DataFrame(index=adata.var_names)
     )
@@ -82,6 +91,102 @@ def get_correlation_modules(
     )
 
     adata.varm[f'{layer}_umap'] = corr_dist_adata.obsm['X_umap']
+
+    return adata
+
+
+def get_correlation_submodules(
+    adata,
+    layer='X',
+    n_neighbors=10,
+    leiden_kwargs={},
+    input_key='gene_module',
+    output_key='gene_submodule'
+):
+    """
+    Get correlation submodules iteratively from an anndata object
+    that contains count data and correlation modules
+
+    :param adata: Data object containing expression data and
+        correlation modules in .var
+    :type adata: ad.AnnData
+    :param layer: Layer to calculate correlation and find
+        submodules from, defaults to 'X'
+    :type layer: str, optional
+    :param n_neighbors: Number of neighbors in kNN, defaults
+        to 10
+    :type n_neighbors: int, optional
+    :param leiden_kwargs: Keyword arguments to sc.tl.leiden
+    :type leiden_kwargs: dict, optional
+    :param input_key: Column in .var with module IDs,
+        defaults to 'gene_module'
+    :type input_key: str, optional
+    :param output_key: Column to add to adata.var with module IDs,
+        defaults to 'gene_submodule'
+    :type output_key: str, optional
+
+    :return: The original adata object with:
+        Gene-gene submodule correlation UMAP in 'X_submodule_umap' in .varm
+        Module submembership IDs in .var[output_key]
+    :rtype: ad.AnnData
+    """
+
+    if input_key not in adata.var.columns:
+        raise RuntimeError(f"Column {input_key} not present in .var")
+
+    lref = adata.X if layer == 'X' else adata.layers[layer]
+
+    adata.var[output_key] = -1
+    adata.varm[f'{layer}_submodule_umap'] = np.zeros(
+        (adata.shape[1], 2),
+        float
+    )
+
+    for cat in adata.var[input_key].cat.categories:
+
+        _slice_idx = adata.var[input_key] == cat
+
+        _data = lref[:, _slice_idx]
+
+        try:
+            _data = _data.toarray()
+        except AttributeError:
+            pass
+ 
+        _slice_corr_dist_adata = ad.AnnData(
+            1 - corrcoef(_data),
+            var=pd.DataFrame(index=adata.var_names[_slice_idx]),
+            obs=pd.DataFrame(index=adata.var_names[_slice_idx])
+        )
+        del _data
+
+        sc.pp.neighbors(
+            _slice_corr_dist_adata,
+            n_neighbors=n_neighbors,
+            transformer=KNeighborsTransformerPassthrough(
+                n_neighbors=n_neighbors
+            ),
+            use_rep='X'
+        )
+        sc.tl.umap(_slice_corr_dist_adata)
+        sc.tl.leiden(_slice_corr_dist_adata, **leiden_kwargs)
+        _slice_corr_dist_adata.obs['leiden'] = _slice_corr_dist_adata.obs['leiden'].astype(int)
+
+        adata.var.loc[
+            _slice_corr_dist_adata.obs.index,
+            output_key
+        ] = _slice_corr_dist_adata.obs['leiden']
+
+        adata.varm[f'{layer}_submodule_umap'][
+            adata.var.index.get_indexer(
+                _slice_corr_dist_adata.obs.index
+            ),
+            :
+        ] = _slice_corr_dist_adata.obsm['X_umap']
+
+        del _slice_corr_dist_adata
+
+    adata.var[output_key] = adata.var[output_key].astype('category')
 
     return adata
 

@@ -1,4 +1,4 @@
-__version__ = '0.4.6'
+__version__ = '0.4.7'
 
 from ._mcv import (
     mcv,
@@ -19,3 +19,8 @@ from .utils.dot_product import (
 )
 from .utils import standardize_data
 from ._denoise import denoise_data
+from ._modules import (
+    get_correlation_modules,
+    get_correlation_submodules,
+    module_score
+)

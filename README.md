@@ -25,7 +25,7 @@ mcv(
 Noise2Self for kNN selection [arXiv manuscript](https://arxiv.org/abs/1901.11365)
 
 ```
-def noise2self(
+noise2self(
     count_data,
     neighbors=None,
     npcs=None,
@@ -42,3 +42,23 @@ def noise2self(
 ```
 
 Implemented as in [DEWÄKSS](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008569)
+
+Feature module and submodule determination using pearson correlation distance, kNN embedding, and leiden clustering
+```
+get_correlation_modules(
+    adata,
+    layer='X',
+    n_neighbors=10,
+    leiden_kwargs={},
+    output_key='gene_module'
+)
+
+get_correlation_submodules(
+    adata,
+    layer='X',
+    n_neighbors=10,
+    leiden_kwargs={},
+    input_key='gene_module',
+    output_key='gene_submodule'
+)
+```
