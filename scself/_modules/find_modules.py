@@ -3,12 +3,12 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 
-from scipy.cluster.hierarchy import linkage, dendrogram
-from scipy.spatial.distance import squareform
 from sklearn.neighbors import KNeighborsTransformer, kneighbors_graph
 from sklearn.preprocessing import StandardScaler
-from scself.utils import corrcoef
-
+from scself.utils.correlation import (
+    corrcoef,
+    correlation_clustering_and_umap
+)
 
 ### Calculate k-NN from a distance matrix directly in scanpy
 class KNeighborsTransformerPassthrough(KNeighborsTransformer):
@@ -56,33 +56,16 @@ def get_correlation_modules(
     """
 
     lref = adata.X if layer == 'X' else adata.layers[layer]
-
-    try:
-        lref = lref.toarray()
-    except AttributeError:
-        pass
-
     adata.varp[f'{layer}_corrcoef'] = corrcoef(lref)
 
     del lref
 
-    corr_dist_adata = ad.AnnData(
-        1 - adata.varp[f'{layer}_corrcoef'],
-        var=pd.DataFrame(index=adata.var_names),
-        obs=pd.DataFrame(index=adata.var_names)
-    )
-
-    # Build kNN and get modules by graph clustering
-    sc.pp.neighbors(
-        corr_dist_adata,
+    corr_dist_adata = correlation_clustering_and_umap(
+        adata.varp[f'{layer}_corrcoef'],
         n_neighbors=n_neighbors,
-        transformer=KNeighborsTransformerPassthrough(
-            n_neighbors=n_neighbors
-        ),
-        use_rep='X'
+        var_names=adata.var_names,
+        **leiden_kwargs
     )
-    sc.tl.umap(corr_dist_adata)
-    sc.tl.leiden(corr_dist_adata, **leiden_kwargs)
 
     adata.var[output_key] = corr_dist_adata.obs['leiden'].astype(
         int
@@ -146,30 +129,12 @@ def get_correlation_submodules(
 
         _slice_idx = adata.var[input_key] == cat
 
-        _data = lref[:, _slice_idx]
-
-        try:
-            _data = _data.toarray()
-        except AttributeError:
-            pass
- 
-        _slice_corr_dist_adata = ad.AnnData(
-            1 - corrcoef(_data),
-            var=pd.DataFrame(index=adata.var_names[_slice_idx]),
-            obs=pd.DataFrame(index=adata.var_names[_slice_idx])
-        )
-        del _data
-
-        sc.pp.neighbors(
-            _slice_corr_dist_adata,
+        _slice_corr_dist_adata = correlation_clustering_and_umap(
+            corrcoef(lref[:, _slice_idx]),
             n_neighbors=n_neighbors,
-            transformer=KNeighborsTransformerPassthrough(
-                n_neighbors=n_neighbors
-            ),
-            use_rep='X'
+            var_names=adata.var_names[_slice_idx],
+            **leiden_kwargs
         )
-        sc.tl.umap(_slice_corr_dist_adata)
-        sc.tl.leiden(_slice_corr_dist_adata, **leiden_kwargs)
         _slice_corr_dist_adata.obs['leiden'] = _slice_corr_dist_adata.obs['leiden'].astype(int)
 
         adata.var.loc[
