@@ -22,5 +22,6 @@ from ._denoise import denoise_data
 from ._modules import (
     get_correlation_modules,
     get_correlation_submodules,
-    module_score
+    module_score,
+    score_all_modules
 )

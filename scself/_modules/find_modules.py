@@ -1,25 +1,9 @@
-import anndata as ad
-import pandas as pd
 import numpy as np
-import scanpy as sc
 
-from sklearn.neighbors import KNeighborsTransformer, kneighbors_graph
-from sklearn.preprocessing import StandardScaler
 from scself.utils.correlation import (
     corrcoef,
     correlation_clustering_and_umap
 )
-
-### Calculate k-NN from a distance matrix directly in scanpy
-class KNeighborsTransformerPassthrough(KNeighborsTransformer):
-
-    def fit_transform(self, X):
-        return kneighbors_graph(
-            X,
-            metric='precomputed',
-            n_neighbors=self.n_neighbors
-        )
-
 
 def get_correlation_modules(
     adata,
@@ -157,76 +141,3 @@ def get_correlation_submodules(
     adata.var[output_key] = adata.var[output_key].astype('category')
 
     return adata
-
-
-def module_score(
-    adata,
-    genes,
-    layer='X',
-    scaler=StandardScaler(),
-    fit_scaler=True,
-    clipping=(-10, 10),
-    **kwargs
-):
-    """
-    Calculate a module score from a set of genes
-    by zscoring each gene, clipping to [-10, 10], and averaging
-    the gene zscores for each observation.
-
-    Casts to dense array unless the data is sparse CSR.
-
-    :param adata: AnnData with gene expression
-    :type adata: ad.AnnData
-    :param genes: List of genes to use for the module
-    :type genes: list, tuple, pd.Index, pd.Series
-    :param layer: Data layer to use for scoring, defaults to 'X'
-    :type layer: str, optional
-    :param scaler: Scaling transformer from sklearn,
-        defaults to StandardScaler()
-    :type scaler: sklearn.Transformer, optional
-    :param fit_scaler: Fit scaler to the data (fit_transform),
-        instead of just using it (transform), defaults to True
-    :type fit_scaler: bool, optional
-    :param clipping: Clip post-scaled results to a range,
-        defaults to (-10, 10)
-    :type clipping: tuple, optional
-    :return: Score for every observation in the array
-    :rtype: np.ndarray
-    """
-
-    if layer == 'X':
-        dref = adata.X
-    else:
-        dref = adata.layers[layer]
-
-    _data = dref[:, adata.var_names.isin(genes)]
-
-    try:
-        _data = _data.toarray()
-    except AttributeError:
-        _data = _data.copy()
-
-    if scaler is None:
-        _scores = _data
-    else:
-        # Allow for uninstantiated scalers to
-        # be passed in
-        try:
-            scaler = scaler(**kwargs)
-        except TypeError:
-            pass
-
-        # Either fit the scaler and then use it
-        # or use it without fitting, depending on flag
-        if fit_scaler:
-            _scores = scaler.fit_transform(_data)
-        else:
-            _scores = scaler.transform(_data)
-
-    if clipping is not None:
-        np.clip(_scores, *clipping, out=_scores)
-
-    return np.mean(
-        _scores,
-        axis=1
-    )
