@@ -127,6 +127,9 @@ def get_correlation_submodules(
 
     for cat in adata.var[input_key].cat.categories:
 
+        if cat == -1:
+            continue
+
         _slice_idx = adata.var[input_key] == cat
 
         _slice_corr_dist_adata = correlation_clustering_and_umap(
