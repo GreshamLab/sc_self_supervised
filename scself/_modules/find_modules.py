@@ -55,10 +55,10 @@ def get_correlation_modules(
     :rtype: ad.AnnData
     """
 
-    lref = adata.X if layer == 'X' else adata.layers[layer]
-    adata.varp[f'{layer}_corrcoef'] = corrcoef(lref)
-
-    del lref
+    if f'{layer}_corrcoef' not in adata.varp.keys():
+        adata.varp[f'{layer}_corrcoef'] = corrcoef(
+            adata.X if layer == 'X' else adata.layers[layer]
+        )
 
     corr_dist_adata = correlation_clustering_and_umap(
         adata.varp[f'{layer}_corrcoef'],
