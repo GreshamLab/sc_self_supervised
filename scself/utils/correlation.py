@@ -25,7 +25,7 @@ class KNeighborsTransformerPassthrough(KNeighborsTransformer):
 def cov(X, axis=0):
 
     if sps.issparse(X):
-        return cov_sparse(X)
+        return cov_sparse(X, axis=axis)
 
     # Center and get num rows
     avg, w_sum = np.average(X, axis=axis, weights=None, returned=True)
@@ -33,26 +33,38 @@ def cov(X, axis=0):
     X = X - (avg[None, :] if axis == 0 else avg[:, None])
 
     # Gram matrix
-    X = np.dot(X.T, X)
-    X *= np.true_divide(1, w_sum)
+    if axis == 0:
+        X = np.dot(X.T, X)
+    else:
+        X = np.dot(X, X.T)
+
+    X *= np.true_divide(1, w_sum - 1)
 
     return X
 
 def cov_sparse(X, axis=0):
 
-    avg = X.mean(axis)
+    axsum = X.sum(axis)
+    w_sum = X.shape[axis]
 
     # for spmatrix & sparray
     try:
-        avg = avg.A1
+        axsum = axsum.A1
     except AttributeError:
-        avg = avg.ravel()
+        axsum = axsum.ravel()
 
-    w_sum = X.shape[axis]
-    X = dot(X.T, X, dense=True)
-    X *= np.true_divide(1, w_sum)
+    axsum = axsum.reshape(-1, 1).dot(axsum.reshape(1, -1)) 
+    axsum /= w_sum
 
-    return X
+    if axis == 0:
+        X_cov = dot(X.T, X, dense=True)
+    else:
+        X_cov = dot(X, X.T, dense=True)
+
+    X_cov -= axsum
+    X_cov /= (w_sum - 1)
+
+    return X_cov
 
 def corrcoef(X, axis=0):
 
