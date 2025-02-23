@@ -86,7 +86,9 @@ def _normalize(
 
     count_data.obs[f'{layer}_counts'] = counts
     count_data.obs[f'{layer}_size_factor'] = size_factor
-    count_data.obs[f'{layer}_target_sum'] = target_sum
+
+    if target_sum is not None:
+        count_data.obs[f'{layer}_target_sum'] = target_sum
 
     if depth_by_sampling:
         _normalize_by_sampling(
