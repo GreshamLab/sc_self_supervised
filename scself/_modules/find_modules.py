@@ -10,7 +10,8 @@ def get_correlation_modules(
     layer='X',
     n_neighbors=10,
     leiden_kwargs={},
-    output_key='gene_module'
+    output_key='gene_module',
+    obs_mask=None
 ):
     """
     Get correlation modules from an anndata object.
@@ -31,6 +32,8 @@ def get_correlation_modules(
     :param output_key: Column to add to adata.var with module IDs,
         defaults to 'gene_module'
     :type output_key: str, optional
+    :param obs_mask: Boolean mask or slice for observations to consider
+    :type obs_mask: np.ndarray or slice, optional
 
     :return: The original adata object with:
         Gene correlations in 'X_corrcoef' in .varp
@@ -39,9 +42,13 @@ def get_correlation_modules(
     :rtype: ad.AnnData
     """
 
+    if obs_mask is None:
+        obs_mask = slice(None)
+
     if f'{layer}_corrcoef' not in adata.varp.keys():
         adata.varp[f'{layer}_corrcoef'] = corrcoef(
-            adata.X if layer == 'X' else adata.layers[layer]
+            adata.X[obs_mask, :] if layer == 'X' else
+            adata.layers[layer][obs_mask, :]
         )
 
     corr_dist_adata = correlation_clustering_and_umap(
@@ -68,7 +75,8 @@ def get_correlation_submodules(
     n_neighbors=10,
     leiden_kwargs={},
     input_key='gene_module',
-    output_key='gene_submodule'
+    output_key='gene_submodule',
+    obs_mask=None
 ):
     """
     Get correlation submodules iteratively from an anndata object
@@ -91,6 +99,8 @@ def get_correlation_submodules(
     :param output_key: Column to add to adata.var with module IDs,
         defaults to 'gene_submodule'
     :type output_key: str, optional
+    :param obs_mask: Boolean mask or slice for observations to consider
+    :type obs_mask: np.ndarray or slice, optional
 
     :return: The original adata object with:
         Gene-gene submodule correlation UMAP in 'X_submodule_umap' in .varm
@@ -100,6 +110,9 @@ def get_correlation_submodules(
 
     if input_key not in adata.var.columns:
         raise RuntimeError(f"Column {input_key} not present in .var")
+    
+    if obs_mask is None:
+        obs_mask = slice(None)
 
     lref = adata.X if layer == 'X' else adata.layers[layer]
 
@@ -117,7 +130,7 @@ def get_correlation_submodules(
         _slice_idx = adata.var[input_key] == cat
 
         _slice_corr_dist_adata = correlation_clustering_and_umap(
-            corrcoef(lref[:, _slice_idx]),
+            corrcoef(lref[:, _slice_idx][obs_mask, :]),
             n_neighbors=n_neighbors,
             var_names=adata.var_names[_slice_idx],
             **leiden_kwargs
