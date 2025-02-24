@@ -155,7 +155,7 @@ def score_all_submodules(
                     x for x in adata.var[
                         [module_column, submodule_column]
                     ].value_counts().sort_index().index.values
-                    if (x[0] not in [-1, '-1']) and (x[0] in adata.uns[module_column])
+                    if (x[0] not in [-1, '-1']) and (x[0] in adata.uns[module_column + "_score"])
                 ],
                 dtype=[('module', int), ('submodule', int)]
             )
