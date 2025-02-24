@@ -4,5 +4,6 @@ from .find_modules import (
 )
 from .score_modules import (
     score_all_modules,
+    score_all_submodules,
     module_score
 )

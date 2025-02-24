@@ -50,7 +50,9 @@ get_correlation_modules(
     layer='X',
     n_neighbors=10,
     leiden_kwargs={},
-    output_key='gene_module'
+    output_key='gene_module',
+    obs_mask=None
+
 )
 
 get_correlation_submodules(
@@ -59,6 +61,36 @@ get_correlation_submodules(
     n_neighbors=10,
     leiden_kwargs={},
     input_key='gene_module',
-    output_key='gene_submodule'
+    output_key='gene_submodule',
+    obs_mask=None
+)
+```
+
+Feature module and submodule scoring
+```
+score_all_modules(
+    adata,
+    modules=None,
+    module_column='gene_module',
+    output_key_suffix='_score',
+    obs_mask=None,
+    layer='X',
+    scaler=TruncMinMaxScaler(),
+    fit_scaler=True,
+    clipping=None
+)
+
+score_all_submodules(
+    adata,
+    modules=None,
+    submodules=None,
+    module_column='gene_module',
+    submodule_column='gene_submodule',
+    output_key_suffix='_score',
+    obs_mask=None,
+    layer='X',
+    scaler=TruncMinMaxScaler(),
+    fit_scaler=True,
+    clipping=None
 )
 ```

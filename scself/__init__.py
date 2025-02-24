@@ -23,5 +23,6 @@ from ._modules import (
     get_correlation_modules,
     get_correlation_submodules,
     module_score,
-    score_all_modules
+    score_all_modules,
+    score_all_submodules
 )
