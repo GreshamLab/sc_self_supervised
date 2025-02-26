@@ -85,6 +85,26 @@ def test_get_correlation_submodules_basic(simple_adata):
     # Check that original modules are preserved
     assert all(simple_adata.var['gene_module'] == _original)
 
+def test_get_correlation_submodules_one_small(simple_adata):
+    # Test basic submodule functionality
+    simple_adata.var['gene_module'] = [0] * 9 + [1] * 3
+    simple_adata.var['gene_module'] = simple_adata.var['gene_module'].astype('category')
+
+    _original = simple_adata.var['gene_module'].copy()
+    result = get_correlation_submodules(simple_adata, n_neighbors=3)
+
+    assert all([x == y for x, y in zip(
+        [0] * 3 + [1] * 3 + [2] * 3 + [0] * 3,
+        result.var['gene_submodule'].tolist()
+    )])
+    
+    assert 'gene_submodule' in result.var
+    assert 'X_submodule_umap' in result.varm
+    assert result.var['gene_submodule'].dtype.name == 'category'
+    
+    # Check that original modules are preserved
+    assert all(simple_adata.var['gene_module'] == _original)
+
 def test_get_correlation_submodules_missing_input(simple_adata):
     # Test error when input_key is missing
     with pytest.raises(RuntimeError):

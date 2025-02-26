@@ -93,9 +93,25 @@ def correlation_clustering_and_umap(
     
     corr_dist_adata = ad.AnnData(
         1 - correlations,
-        var=pd.DataFrame(index=var_names),
-        obs=pd.DataFrame(index=var_names)
+        var=pd.DataFrame(index=var_names) if var_names is not None else None,
+        obs=pd.DataFrame(index=var_names) if var_names is not None else None
     )
+
+    # Special case handling when there are too many neighbors for
+    # the provided data; comes up with submodules a lot
+    if corr_dist_adata.shape[0] <= n_neighbors:
+
+        n_neighbors = corr_dist_adata.shape[0] - 2
+
+        if n_neighbors <= 1:
+            corr_dist_adata.obs['leiden'] = '0'
+            corr_dist_adata.obs['leiden'] = corr_dist_adata.obs['leiden'].astype('category')
+            corr_dist_adata.obsm['X_umap'] = np.zeros((corr_dist_adata.shape[0], 2), float)
+            return corr_dist_adata
+    
+        skip_leiden = True
+    else:
+        skip_leiden = False
 
     # Build kNN and get modules by graph clustering
     sc.pp.neighbors(
@@ -107,6 +123,11 @@ def correlation_clustering_and_umap(
         use_rep='X'
     )
     sc.tl.umap(corr_dist_adata)
-    sc.tl.leiden(corr_dist_adata, **leiden_kwargs)
+
+    if skip_leiden:
+        corr_dist_adata.obs['leiden'] = '0'
+        corr_dist_adata.obs['leiden'] = corr_dist_adata.obs['leiden'].astype('category')
+    else:
+        sc.tl.leiden(corr_dist_adata, **leiden_kwargs)
 
     return corr_dist_adata
