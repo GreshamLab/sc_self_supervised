@@ -1,6 +1,9 @@
 import scipy.sparse as sps
 import anndata as ad
+import scanpy as sc
+import numpy as np
 
+from sklearn.preprocessing import StandardScaler
 
 def pca(X, n_pcs, zero_center=True):
 
@@ -45,3 +48,77 @@ def pca(X, n_pcs, zero_center=True):
 
         else:
             return _pca_data
+
+
+def stratified_pca(
+    adata,
+    obs_col,
+    random_seed=100,
+    n_per_group=None,
+    layer='X'
+):
+    """Perform PCA on a stratified subset of cells and project results to full dataset.
+
+    Takes a balanced random sample from each group defined by obs_col to compute PCA,
+    then projects the loadings onto the full dataset. This helps prevent the PCA from
+    being dominated by more abundant cell types.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix
+    obs_col : str
+        Column in adata.obs containing group labels to stratify by
+    random_seed : int, optional
+        Random seed for reproducibility, by default 100
+    n_per_group : int, optional
+        Number of cells to sample per group. If None, uses size of smallest group
+    layer : str, optional
+        Layer in adata.layers to use. If 'X', uses adata.X, by default 'X'
+
+    Returns
+    -------
+    anndata.AnnData
+        Input adata with new obsm['{layer}_pca_stratified'] containing PCA coordinates
+    """
+    # Initialize random number generator
+    rng = np.random.default_rng(random_seed)
+    
+    # Get counts of cells in each group
+    group_counts = adata.obs[obs_col].value_counts()
+
+    # If n_per_group not specified, use size of smallest group
+    if n_per_group is None:
+        n_per_group = min(group_counts)
+
+    # Sample cells from each group
+    keep_idx = []
+    for ct, x in group_counts.items():
+        keep_idx.extend(
+            rng.choice(
+                np.where(adata.obs[obs_col] == ct)[0],
+                size=min(x, n_per_group),
+                replace=False
+            )
+        )
+    
+    # Get expression matrix from specified layer
+    lref = adata.X if layer == 'X' else adata.layers[layer]
+
+    # Create temporary AnnData with balanced sample
+    adata_for_pca = ad.AnnData(
+        lref[keep_idx, :],
+        var=adata.var
+    )
+    
+    # Compute PCA on balanced sample
+    sc.pp.pca(adata_for_pca)
+
+    # Project PCA onto full dataset
+    adata.obsm[f'{layer}_pca_stratified'] = StandardScaler(with_std=False).fit(
+        adata_for_pca.X
+    ).transform(lref) @ adata_for_pca.varm['PCs']
+
+    adata.uns['pca_stratified'] = adata_for_pca.uns['pca'].copy()
+
+    return adata
