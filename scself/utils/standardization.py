@@ -98,7 +98,7 @@ def _normalize(
         )
 
     elif is_csr(lref):
-        from ..sparse.math import sparse_normalize_total
+        from scself.sparse.math import sparse_normalize_total
         sparse_normalize_total(
             lref,
             size_factor=size_factor
@@ -133,7 +133,7 @@ def _normalize(
             scaler.scale_ = scale_factor
 
         if is_csr(lref):
-            from ..sparse.math import sparse_normalize_columns
+            from scself.sparse.math import sparse_normalize_columns
             sparse_normalize_columns(
                 lref,
                 scaler.scale_

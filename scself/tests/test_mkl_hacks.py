@@ -14,7 +14,7 @@ from sklearn.decomposition import TruncatedSVD
 DATA = np.random.default_rng(100).random((100, 50)).astype(np.float32)
 
 
-@unittest.skipIf(MKL_SKIP, 'NO MKL')
+@unittest.skip
 class TestTruncatedSVDMKL(unittest.TestCase):
 
     @unittest.skipIf('CI' in os.environ, 'Skip for CI')

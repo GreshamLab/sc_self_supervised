@@ -6,7 +6,6 @@ from pynndescent import PyNNDescentTransformer
 from sklearn.neighbors import NearestNeighbors
 
 from scself.sparse import is_csr
-from scself.sparse.graph import _shrink_sparse_graph_k
 from scself.utils import array_sum, dot
 
 
@@ -61,6 +60,8 @@ def local_optimal_knn(
     _smallest = keep == 'smallest'
 
     if neighbor_sparse:
+        from scself.sparse.graph import _shrink_sparse_graph_k
+
         _shrink_sparse_graph_k(
             neighbor_graph.data,
             neighbor_graph.indptr,
@@ -250,7 +251,7 @@ def _row_divide(arr, row_divide_vector):
         # Numba function for CSR
         # more memory efficient
         if is_csr(arr):
-            from ..sparse.math import _csr_row_divide
+            from scself.sparse.math import _csr_row_divide
 
             _csr_row_divide(
                 arr.data,

@@ -215,7 +215,7 @@ def mcv_mean_error(
 
     if sps.issparse(x):
 
-        from ..sparse.math import mcv_mean_error_sparse
+        from scself.sparse.math import mcv_mean_error_sparse
 
         return mcv_mean_error_sparse(
             x,

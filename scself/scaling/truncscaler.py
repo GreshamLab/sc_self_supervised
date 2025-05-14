@@ -16,7 +16,7 @@ class TruncRobustScaler(RobustScaler):
             # Use custom extractor to turn X into a CSC with no
             # indices array; RobustScaler makes an undesirabe
             # CSR->CSC conversion
-            from ..sparse.math import sparse_csr_extract_columns
+            from scself.sparse.math import sparse_csr_extract_columns
             super().fit(
                 sparse_csr_extract_columns(X, fake_csc_matrix=True),
                 y

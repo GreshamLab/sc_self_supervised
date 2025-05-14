@@ -97,7 +97,7 @@ def correlation_clustering_and_umap(
         obs=pd.DataFrame(index=var_names) if var_names is not None else None
     )
 
-    # Special case handling when there are too many neighbors for
+    # Special case handling to silently handle when there are too many neighbors for
     # the provided data; comes up with submodules a lot
     if corr_dist_adata.shape[0] <= n_neighbors:
 

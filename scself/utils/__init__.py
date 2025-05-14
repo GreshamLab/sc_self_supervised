@@ -11,7 +11,10 @@ from .pairwise_loss import (
     coefficient_of_variation,
     variance
 )
-from ._pca import pca
+from ._pca import (
+    pca,
+    stratified_pca
+)
 from .shrink import shrink_array_to_zero_inplace
 from .cast_dtype_inplace import cast_to_float_inplace
 from .correlation import (

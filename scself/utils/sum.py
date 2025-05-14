@@ -31,7 +31,7 @@ def array_sum(array, axis=None, squared=False):
     # Because the scipy sparse method here is
     # very memory inefficient
     else:
-        from ..sparse.math import sparse_sum
+        from scself.sparse.math import sparse_sum
 
         return sparse_sum(
             array,

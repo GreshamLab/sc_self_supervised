@@ -147,7 +147,7 @@ def _noise_to_self_error(
 
     if (metric == 'mse' and is_csr(X)):
 
-        from ..sparse.graph import chunk_graph_mse
+        from scself.sparse.graph import chunk_graph_mse
 
         _n_row = X.shape[0]
 
