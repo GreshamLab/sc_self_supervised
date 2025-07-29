@@ -9,7 +9,11 @@ import scipy.sparse as sps
 import anndata as ad
 import numpy.testing as npt
 from scself.scaling import TruncMinMaxScaler
-from scself._modules.score_modules import score_all_modules, module_score
+from scself._modules.score_modules import (
+    score_all_modules,
+    module_score,
+    regress_out_to_residuals
+)
 
 class TestModuleScoring(unittest.TestCase):
     @classmethod
@@ -21,6 +25,7 @@ class TestModuleScoring(unittest.TestCase):
         
         # Create expression matrix with some clear patterns
         cls.X = np.random.negative_binomial(20, 0.3, (n_obs, n_vars))
+        cls.n_counts = cls.X.sum(axis=1)
         
         # Create module assignments
         cls.modules = np.repeat(['A', 'B', 'C'], n_vars // 3 + 2)[:n_vars]
@@ -37,6 +42,32 @@ class TestModuleScoring(unittest.TestCase):
             var={"gene_module": cls.modules}
         )
 
+    def test_regress_out_to_residuals(self):
+
+        scores = module_score(
+            self.adata,
+            self.adata.var_names
+        )
+
+        resids = regress_out_to_residuals(
+            self.n_counts,
+            scores
+        )
+
+        from scipy.stats import linregress
+
+        _regress = linregress(
+            self.n_counts,
+            scores
+        )
+        _yhat = self.n_counts * _regress.slope + _regress.intercept
+        _test_resids = scores - _yhat
+
+        npt.assert_allclose(
+            _test_resids.reshape(-1, 1),
+            resids
+        )
+
     def test_basic_scoring(self):
         """Test basic module scoring functionality"""
         result = score_all_modules(self.adata.copy())
@@ -50,6 +81,18 @@ class TestModuleScoring(unittest.TestCase):
         result = score_all_modules(self.adata_sparse.copy())
         
         dense_result = score_all_modules(self.adata.copy())
+        npt.assert_allclose(
+            result.obsm['gene_module_score'],
+            dense_result.obsm['gene_module_score'],
+            rtol=1e-5
+        )
+
+    def test_sparse_scoring_regress_counts(self):
+        """Test module scoring with sparse input"""
+
+        result = score_all_modules(self.adata_sparse.copy(), regress_out_variable=self.n_counts)
+        dense_result = score_all_modules(self.adata.copy(), regress_out_variable=self.n_counts)
+
         npt.assert_allclose(
             result.obsm['gene_module_score'],
             dense_result.obsm['gene_module_score'],

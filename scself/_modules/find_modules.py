@@ -128,6 +128,7 @@ def get_correlation_submodules(
             continue
 
         _slice_idx = adata.var[input_key] == cat
+        _slice_idx = _slice_idx.values
 
         _slice_corr_dist_adata = correlation_clustering_and_umap(
             corrcoef(lref[:, _slice_idx][obs_mask, :]),

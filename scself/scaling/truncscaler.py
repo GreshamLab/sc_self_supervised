@@ -116,7 +116,7 @@ class TruncMinMaxScaler(MinMaxScaler):
         # is given as raw values
         elif self.clipping_range is not None:
             n = X.shape[1]
-            print(_to_array(self.clipping_range, n))
+            _to_array(self.clipping_range, n)
             data_min_, data_max_ = _to_array(self.clipping_range, n)
 
         else:

@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import linregress
 
 from scself.scaling import TruncMinMaxScaler
 from scself.utils.correlation import corrcoef
@@ -13,6 +14,7 @@ def score_all_modules(
     scaler=TruncMinMaxScaler(),
     fit_scaler=True,
     clipping=None,
+    regress_out_variable=None,
     **kwargs
 ):
     """
@@ -41,6 +43,9 @@ def score_all_modules(
     :type fit_scaler: bool, optional
     :param clipping: Tuple of (min, max) values to clip scores to
     :type clipping: tuple, optional
+    :param regress_out_variable: A predictor for OLS; scores will be reported
+        as scaled residuals after OLS if this is provided
+    :type regress_out_variable: np.ndarray, optional
     :param kwargs: Additional keyword arguments passed to module_score()
 
     :return: Original AnnData with added fields:
@@ -70,7 +75,7 @@ def score_all_modules(
     )
 
     for i, cat in enumerate(modules):
-        adata.obsm[_outkey][obs_mask, i] = module_score(
+        _scores = module_score(
             adata,
             adata.var_names[adata.var[module_column] == cat],
             obs_mask=obs_mask,
@@ -80,6 +85,19 @@ def score_all_modules(
             clipping=clipping,
             **kwargs
         )
+
+        if regress_out_variable is not None:
+            _scores = regress_out_to_residuals(
+                regress_out_variable,
+                _scores
+            )
+
+            if fit_scaler:
+                _scores = scaler.fit_transform(_scores)
+            else:
+                _scores = scaler.transform(_scores)
+
+        adata.obsm[_outkey][obs_mask, i] = _scores.ravel()
     
     adata.uns[_outkey] = modules
     adata.uns[_outkey + '_corrcoef'] = corrcoef(adata.obsm[_outkey][obs_mask, :])
@@ -99,6 +117,7 @@ def score_all_submodules(
     scaler=TruncMinMaxScaler(),
     fit_scaler=True,
     clipping=None,
+    regress_out_variable=None,
     **kwargs
 ):
     """
@@ -127,6 +146,9 @@ def score_all_submodules(
     :type fit_scaler: bool, optional
     :param clipping: Tuple of (min, max) values to clip scores to
     :type clipping: tuple, optional
+    :param regress_out_variable: A predictor for OLS; scores will be reported
+        as scaled residuals after OLS if this is provided
+    :type regress_out_variable: np.ndarray, optional
     :param kwargs: Additional keyword arguments passed to module_score()
 
     :return: Original AnnData with added fields:
@@ -173,7 +195,7 @@ def score_all_submodules(
         _idx = adata.var[module_column] == cat
         _idx &= adata.var[submodule_column] == subcat
 
-        adata.obsm[_outkey][obs_mask, i] = module_score(
+        _scores = module_score(
             adata,
             adata.var_names[_idx],
             obs_mask=obs_mask,
@@ -183,6 +205,19 @@ def score_all_submodules(
             clipping=clipping,
             **kwargs
         )
+
+        if regress_out_variable is not None:
+            _scores = regress_out_to_residuals(
+                regress_out_variable,
+                _scores
+            )
+
+            if fit_scaler:
+                _scores = scaler.fit_transform(_scores)
+            else:
+                _scores = scaler.transform(_scores)
+
+        adata.obsm[_outkey][obs_mask, i] = _scores.ravel()
     
     adata.uns[_outkey] = submodules
     adata.uns[_outkey + '_corrcoef'] = corrcoef(adata.obsm[_outkey][obs_mask, :])
@@ -268,3 +303,21 @@ def module_score(
         _scores,
         axis=1
     )
+
+
+def regress_out_to_residuals(
+    predictor,
+    scores
+):
+    
+    predictor = predictor.ravel()
+    scores = scores.ravel()
+
+    _regress = linregress(
+        predictor,
+        scores
+    )
+    _yhat = predictor * _regress.slope + _regress.intercept
+    _resids = scores - _yhat
+
+    return _resids.reshape(-1, 1)
