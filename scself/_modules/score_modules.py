@@ -88,7 +88,7 @@ def score_all_modules(
 
         if regress_out_variable is not None:
             _scores = regress_out_to_residuals(
-                regress_out_variable,
+                regress_out_variable[obs_mask],
                 _scores
             )
 
@@ -208,7 +208,7 @@ def score_all_submodules(
 
         if regress_out_variable is not None:
             _scores = regress_out_to_residuals(
-                regress_out_variable,
+                regress_out_variable[obs_mask],
                 _scores
             )
 
