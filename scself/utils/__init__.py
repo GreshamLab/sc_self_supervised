@@ -20,3 +20,4 @@ from .correlation import (
     cov,
     corrcoef
 )
+from .hierarchical_clustering import hclust
