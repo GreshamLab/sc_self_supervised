@@ -9,7 +9,7 @@ from scipy.spatial.distance import pdist
 
 def hclust(data, metric='euclidean', method='ward'):
 
-    if data.shape > 10000:
+    if data.shape[0] > 10000:
         sys.setrecursionlimit(10000)
 
     return dendrogram(
