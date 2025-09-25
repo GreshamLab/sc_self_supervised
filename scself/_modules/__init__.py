@@ -2,6 +2,11 @@ from .find_modules import (
     get_correlation_modules,
     get_correlation_submodules
 )
+
+from .find_weighted_modules import (
+    get_combined_correlation_modules
+)
+
 from .score_modules import (
     score_all_modules,
     score_all_submodules,

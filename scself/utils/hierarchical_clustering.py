@@ -8,7 +8,13 @@ from scipy.cluster.hierarchy import (
 from scipy.spatial.distance import pdist
 
 
-def hclust(data, metric='euclidean', method='ward', return_fcluster=False, **kwargs):
+def hclust(
+    data,
+    metric='euclidean',
+    method='ward',
+    return_fcluster=False,
+    **fcluster_kwargs
+):
 
     # Increase recursion limit so dendrogram doesn't throw a fit
     # if needed
@@ -40,7 +46,7 @@ def hclust(data, metric='euclidean', method='ward', return_fcluster=False, **kwa
     if return_fcluster:
         return _order, fcluster(
             _links,
-            **kwargs
+            **fcluster_kwargs
         )
     else:
         return _order

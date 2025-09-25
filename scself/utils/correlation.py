@@ -88,6 +88,7 @@ def correlation_clustering_and_umap(
     correlations,
     n_neighbors=10,
     var_names=None,
+    skip_leiden=None,
     **leiden_kwargs
 ):
     
@@ -97,9 +98,12 @@ def correlation_clustering_and_umap(
         obs=pd.DataFrame(index=var_names) if var_names is not None else None
     )
 
-    # Special case handling to silently handle when there are too many neighbors for
-    # the provided data; comes up with submodules a lot
-    if corr_dist_adata.shape[0] <= n_neighbors:
+    # Special case handling to silently handle when there are too many neighbors
+    # for the provided data; comes up with submodules a lot
+    if skip_leiden is not None:
+        pass
+
+    elif corr_dist_adata.shape[0] <= n_neighbors:
 
         n_neighbors = corr_dist_adata.shape[0] - 2
 
