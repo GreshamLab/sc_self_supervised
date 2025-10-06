@@ -24,5 +24,6 @@ from ._modules import (
     get_correlation_submodules,
     module_score,
     score_all_modules,
-    score_all_submodules
+    score_all_submodules,
+    get_combined_correlation_modules
 )

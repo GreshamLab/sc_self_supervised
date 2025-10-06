@@ -10,6 +10,7 @@ import pandas as pd
 from scipy import sparse
 
 from scself._modules.find_weighted_modules import get_combined_correlation_modules
+from scself._modules.find_modules import get_correlation_modules
 
 
 @pytest.fixture
@@ -89,6 +90,21 @@ def misaligned_adata_list():
 
     return [adata1, adata2]
 
+
+def test_fixtures(aligned_adata_list):
+
+    result = get_correlation_modules(
+        aligned_adata_list[0],
+        n_neighbors=3
+    )
+
+    assert np.array_equal(
+        result.var['gene_module'].values[0:8],
+        [0] * 4 + [1] * 4
+    ) or np.array_equal(
+        result.var['gene_module'].values[0:8],
+        [1] * 4 + [0] * 4
+    )
 
 def test_basic_functionality_aligned(aligned_adata_list):
     """Test basic functionality with aligned datasets."""
