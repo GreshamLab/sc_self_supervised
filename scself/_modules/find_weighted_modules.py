@@ -3,6 +3,7 @@ import numpy as np
 import anndata as ad
 
 from functools import reduce
+from scipy.sparse import csr_matrix
 
 from scself.utils.correlation import (
     corrcoef,
@@ -116,12 +117,15 @@ def get_combined_correlation_modules(
     # Create a zeroed correlation matrix for the
     # gene union
     full_correlation = ad.AnnData(
-        np.zeros(
-            (_n_genes, _n_genes),
-            dtype=float
-        ),
+        csr_matrix((_n_genes, _n_genes)),
         var=pd.DataFrame(index=_genes),
         obs=pd.DataFrame(index=_genes)
+    )
+
+    _corr_layer = f'{layer[0]}_corrcoef'
+    full_correlation.layers[_corr_layer] = np.zeros(
+        (_n_genes, _n_genes),
+        dtype=float
     )
 
     # Iterate through all the anndata object and add
@@ -133,42 +137,46 @@ def get_combined_correlation_modules(
     ):
         
         if _do_reindex:
-            full_correlation.X[
+            full_correlation.layers[_corr_layer][
                 np.ix_(
                     full_correlation.obs_names.get_indexer(adata.var_names),
                     full_correlation.var_names.get_indexer(adata.var_names)
                 )
             ] += adata.varp[f'{layer_i}_corrcoef']
         else:
-            full_correlation.X += adata.varp[f'{layer_i}_corrcoef']
+            full_correlation.layers[_corr_layer] += adata.varp[f'{layer_i}_corrcoef']
     
     # Correct for the number of times the gene-gene correlation
     # was calculated
-    full_correlation.X /= np.minimum(
+    full_correlation.layers[_corr_layer] /= np.minimum(
         _gene_counts[:, None],
         _gene_counts[None, :]
     )
+
+    assert full_correlation.layers[_corr_layer].max() <= 1.0
     
-    full_correlation = correlation_clustering_and_umap(
-        full_correlation.X,
+    _corr_results = correlation_clustering_and_umap(
+        full_correlation.layers[_corr_layer],
         n_neighbors=n_neighbors,
         var_names=full_correlation.var_names,
         **leiden_kwargs
     )
 
-    full_correlation.obs['leiden'] = full_correlation.obs['leiden'].astype(int)
+    full_correlation.obs['leiden'] = _corr_results.obs['leiden'].astype(int).values
+    full_correlation.var['leiden'] = _corr_results.obs['leiden'].astype(int).values
+    full_correlation.obsm[f'{layer_i}_umap'] = _corr_results.obsm['X_umap']
 
     for adata, layer_i in zip(
         adata_list,
         layer
     ):
-        _gene_idx = full_correlation.var_names.get_indexer(adata.var_names)
+        _gene_idx = _corr_results.var_names.get_indexer(adata.var_names)
 
         # Put the gene module memberships in
-        adata.var[output_key] = full_correlation.obs['leiden']
+        adata.var[output_key] = _corr_results.obs['leiden']
 
         # Put the partial umap into the separate objects
         # so they can be plotted in the same space
-        adata.varm[f'{layer_i}_umap'] = full_correlation.obsm['X_umap'][_gene_idx, :]
+        adata.varm[f'{layer_i}_umap'] = _corr_results.obsm['X_umap'][_gene_idx, :]
 
     return full_correlation
