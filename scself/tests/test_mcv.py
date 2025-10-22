@@ -38,26 +38,30 @@ class TestMCV(unittest.TestCase):
 
     def test_sparse_log(self):
         data = sps.csr_matrix(COUNTS)
+        mse = mcv(
+            data,
+            n=1,
+            n_pcs=5,
+            silent=True
+        )
+
         self.assertEqual(
-            np.argmin(
-                mcv(data, n=1, n_pcs=5, silent=True)
-            ),
+            np.argmin(mse),
             1
         )
 
     def test_sparse_log_scale(self):
         data = sps.csr_matrix(COUNTS)
+        mse = mcv(
+            data,
+            n=1,
+            n_pcs=5,
+            standardization_method='log_scale',
+            silent=True
+        )
 
         self.assertEqual(
-            np.argmin(
-                mcv(
-                    data,
-                    n=1,
-                    n_pcs=5,
-                    standardization_method='log_scale',
-                    silent=True
-                )
-            ),
+            np.argmin(mse),
             1
         )
 
@@ -65,7 +69,7 @@ class TestMCV(unittest.TestCase):
 class TestMCVMetrics(unittest.TestCase):
 
     def setUp(self):
-        self.data = sps.csr_matrix(COUNTS)
+        self.data = sps.csr_matrix(COUNTS.copy())
 
     def testMSErow(self):
 

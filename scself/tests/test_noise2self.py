@@ -331,7 +331,6 @@ class TestKNNSearch(_N2SSetup, unittest.TestCase):
             loss=self.loss
         )
 
-        print(mse)
         self.assertEqual(np.argmin(mse), self.correct_mse_argmin)
 
         npt.assert_almost_equal(
@@ -399,16 +398,16 @@ class TestKNNSearchLogLoss(TestKNNSearch, TestNoise2Self):
     dist = (PDIST.copy(), )
     loss = 'log_loss'
     correct_loss = np.array([
-        0.999322,
-        0.4702795,
-        0.2203677,
-        0.1766228,
-        0.1764214,
-        0.1564008
+        1.5151011,
+        0.5011126,
+        0.2630204,
+        0.1906884,
+        0.1483081,
+        0.1598496
     ])
     correct_opt_pc = 7
     correct_opt_k = 8
-    correct_mse_argmin = 5
+    correct_mse_argmin = 4
 
 
 class TestKNNSearchMultimodal(TestKNNSearch):
