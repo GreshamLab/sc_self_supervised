@@ -3,3 +3,4 @@ coverage
 pytest-cov
 mkl
 igraph
+leidenalg
