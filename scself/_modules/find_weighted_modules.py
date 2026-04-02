@@ -128,8 +128,8 @@ def get_combined_correlation_modules(
     else:
         # Datasets have different genes - compute union of all gene names
         _genes = reduce(
-            lambda x, y: x.var_names.union(y.var_names),
-            adata_list
+            lambda x, y: x.union(y),
+            [z.var_names for z in adata_list]
         )
         _do_reindex=True
 
