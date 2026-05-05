@@ -627,14 +627,14 @@ def _size_factors_stratified(
 
     # Join target sums to each cell based on its group membership
     size_factor = size_factor.join(target_sum, on=stratification_col)
-    target_sum = size_factor['medians'].values.astype(int)
+    target_sum = size_factor['medians'].to_numpy().astype(int)
 
     # Calculate size factors: observed_counts / group_target
     size_factor = size_factor['counts'] / size_factor['medians']
     # Prevent division by zero for empty cells
     size_factor[size_factor == 0] = 1.0
 
-    return counts, size_factor.values, target_sum
+    return counts, size_factor.values.copy(), target_sum
 
 
 def log1p(data):

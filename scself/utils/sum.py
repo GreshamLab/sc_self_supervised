@@ -17,10 +17,12 @@ def array_sum(array, axis=None, squared=False):
             _sums = array.power(2).sum(axis=axis)
         else:
             _sums = array.sum(axis=axis)
+
         try:
-            _sums = _sums.A1
+            _sums = _sums.A1.copy()
         except AttributeError:
             pass
+
         return _sums
 
     # If it is but sum is flattened sum over data
