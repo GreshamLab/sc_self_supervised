@@ -99,6 +99,19 @@ class TestModuleScoring(unittest.TestCase):
             rtol=1e-5
         )
 
+    def test_sparse_scoring_regress_counts_pbar(self):
+        """Test module scoring with sparse input"""
+
+        result = score_all_modules(self.adata_sparse.copy(), regress_out_variable=self.n_counts, pbar=True)
+        dense_result = score_all_modules(self.adata.copy(), regress_out_variable=self.n_counts, pbar=True)
+
+        npt.assert_allclose(
+            result.obsm['gene_module_score'],
+            dense_result.obsm['gene_module_score'],
+            rtol=1e-5
+        )
+
+
     def test_custom_modules(self):
         """Test scoring with explicitly provided modules"""
         custom_modules = ['A', 'C']  # Skip module B

@@ -1,4 +1,6 @@
 import numpy as np
+import tqdm
+
 from scipy.stats import linregress
 
 from scself.scaling import TruncMinMaxScaler
@@ -15,6 +17,7 @@ def score_all_modules(
     fit_scaler=True,
     clipping=None,
     regress_out_variable=None,
+    pbar=False,
     **kwargs
 ):
     """
@@ -74,7 +77,12 @@ def score_all_modules(
         np.nan
     )
 
-    for i, cat in enumerate(modules):
+    if pbar:
+        yield_func = lambda x: enumerate(tqdm.tqdm(x))
+    else:
+        yield_func = enumerate
+
+    for i, cat in yield_func(modules):
         _scores = module_score(
             adata,
             adata.var_names[adata.var[module_column] == cat],
@@ -118,6 +126,7 @@ def score_all_submodules(
     fit_scaler=True,
     clipping=None,
     regress_out_variable=None,
+    pbar=False,
     **kwargs
 ):
     """
@@ -149,6 +158,8 @@ def score_all_submodules(
     :param regress_out_variable: A predictor for OLS; scores will be reported
         as scaled residuals after OLS if this is provided
     :type regress_out_variable: np.ndarray, optional
+    :param pbar: Show a TQDM progress bar during scoring, defaults to False
+    :type pbar: bool, optional
     :param kwargs: Additional keyword arguments passed to module_score()
 
     :return: Original AnnData with added fields:
@@ -191,7 +202,12 @@ def score_all_submodules(
         np.nan
     )
 
-    for i, (cat, subcat) in enumerate(submodules):
+    if pbar:
+        yield_func = lambda x: enumerate(tqdm.tqdm(x))
+    else:
+        yield_func = enumerate
+
+    for i, (cat, subcat) in yield_func(submodules):
         _idx = adata.var[module_column] == cat
         _idx &= adata.var[submodule_column] == subcat
 

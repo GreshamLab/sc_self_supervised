@@ -150,6 +150,7 @@ def get_combined_correlation_modules(
         var=pd.DataFrame(index=_genes),
         obs=pd.DataFrame(index=_genes)
     )
+    full_correlation.var['n_datasets'] = _gene_counts
 
     # Store the summed correlations in a layer (will average later)
     _corr_layer = f'{layer[0]}_corrcoef'
