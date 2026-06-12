@@ -3,7 +3,7 @@ import scipy.sparse as sps
 from scself.sparse import is_csr
 
 
-def array_sum(array, axis=None, squared=False):
+def array_sum(array, axis=None, squared=False, dtype=None):
 
     if not sps.issparse(array):
         return array.sum(axis)
@@ -38,5 +38,6 @@ def array_sum(array, axis=None, squared=False):
         return sparse_sum(
             array,
             axis=axis,
-            squared=squared
+            squared=squared,
+            dtype=dtype
         )

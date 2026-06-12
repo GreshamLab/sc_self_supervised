@@ -107,7 +107,7 @@ def mcv_mean_error_sparse(
     return y
 
 
-def sparse_sum(sparse_array, axis=None, squared=False):
+def sparse_sum(sparse_array, axis=None, squared=False, dtype=None):
     """
     Compute sum of sparse array elements along specified axis.
 
@@ -149,14 +149,16 @@ def sparse_sum(sparse_array, axis=None, squared=False):
                 sparse_array.data,
                 sparse_array.indices,
                 sparse_array.shape[1],
-                squared=squared
+                squared=squared,
+                dtype=dtype
             )
         elif is_csc(sparse_array):
             # For CSC: aggregate by pointer ranges (one per column)
             return _sum_on_indptr(
                 sparse_array.data,
                 sparse_array.indptr,
-                squared=squared
+                squared=squared,
+                dtype=dtype
             )
         else:
             raise ValueError
@@ -168,7 +170,8 @@ def sparse_sum(sparse_array, axis=None, squared=False):
             return _sum_on_indptr(
                 sparse_array.data,
                 sparse_array.indptr,
-                squared=squared
+                squared=squared,
+                dtype=dtype
             )
         elif is_csc(sparse_array):
             # For CSC: aggregate by row indices
@@ -176,7 +179,8 @@ def sparse_sum(sparse_array, axis=None, squared=False):
                 sparse_array.data,
                 sparse_array.indices,
                 sparse_array.shape[0],
-                squared=squared
+                squared=squared,
+                dtype=dtype
             )
         else:
             raise ValueError
@@ -458,7 +462,8 @@ def _sum_on_indices(
     data,
     indices,
     max_index,
-    squared=False
+    squared=False,
+    dtype=None
 ):
     """
     Sum sparse data values by their index positions (JIT-compiled).
@@ -473,6 +478,9 @@ def _sum_on_indices(
     :param squared: If True, sum squared values instead of raw values
     :return: Array of sums, one per unique index from 0 to max_index-1
     """
+
+    if dtype is None:
+        dtype = data.dtype
 
     output = np.zeros(
         max_index,
@@ -496,7 +504,8 @@ def _sum_on_indices(
 def _sum_on_indptr(
     data,
     indptr,
-    squared=False
+    squared=False,
+    dtype=None
 ):
     """
     Sum sparse data values within index pointer ranges (JIT-compiled).
@@ -510,6 +519,9 @@ def _sum_on_indptr(
     :param squared: If True, sum squared values instead of raw values
     :return: Array of sums, one per segment (length = indptr.shape[0] - 1)
     """
+
+    if dtype is None:
+        dtype = data.dtype
 
     output = np.zeros(
         indptr.shape[0] - 1,
