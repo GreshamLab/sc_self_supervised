@@ -484,7 +484,7 @@ def _sum_on_indices(
 
     output = np.zeros(
         max_index,
-        dtype=data.dtype
+        dtype=dtype
     )
 
     if squared:
@@ -525,7 +525,7 @@ def _sum_on_indptr(
 
     output = np.zeros(
         indptr.shape[0] - 1,
-        dtype=data.dtype
+        dtype=dtype
     )
 
     if squared:
