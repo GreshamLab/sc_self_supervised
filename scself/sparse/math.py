@@ -134,6 +134,14 @@ def sparse_sum(sparse_array, axis=None, squared=False, dtype=None):
     if not sps.issparse(sparse_array):
         raise ValueError("sparse_sum requires a sparse array")
 
+    # Resolve the output/accumulation dtype here instead of inside the
+    # Numba kernels. Defaulting `dtype` within an njit function (via
+    # `if dtype is None: dtype = data.dtype`) makes Numba try to unify the
+    # explicitly-passed dtype with `data.dtype` for the np.zeros call, which
+    # fails when they differ (e.g. float64 accumulator over float32 data).
+    if dtype is None:
+        dtype = sparse_array.data.dtype
+
     if axis is None and squared:
         # Get sum of squares for a 1d array with np.inner
         return np.inner(sparse_array.data, sparse_array.data)
@@ -149,16 +157,16 @@ def sparse_sum(sparse_array, axis=None, squared=False, dtype=None):
                 sparse_array.data,
                 sparse_array.indices,
                 sparse_array.shape[1],
-                squared=squared,
-                dtype=dtype
+                dtype,
+                squared=squared
             )
         elif is_csc(sparse_array):
             # For CSC: aggregate by pointer ranges (one per column)
             return _sum_on_indptr(
                 sparse_array.data,
                 sparse_array.indptr,
-                squared=squared,
-                dtype=dtype
+                dtype,
+                squared=squared
             )
         else:
             raise ValueError
@@ -170,8 +178,8 @@ def sparse_sum(sparse_array, axis=None, squared=False, dtype=None):
             return _sum_on_indptr(
                 sparse_array.data,
                 sparse_array.indptr,
-                squared=squared,
-                dtype=dtype
+                dtype,
+                squared=squared
             )
         elif is_csc(sparse_array):
             # For CSC: aggregate by row indices
@@ -179,8 +187,8 @@ def sparse_sum(sparse_array, axis=None, squared=False, dtype=None):
                 sparse_array.data,
                 sparse_array.indices,
                 sparse_array.shape[0],
-                squared=squared,
-                dtype=dtype
+                dtype,
+                squared=squared
             )
         else:
             raise ValueError
@@ -462,8 +470,8 @@ def _sum_on_indices(
     data,
     indices,
     max_index,
-    squared=False,
-    dtype=None
+    dtype,
+    squared=False
 ):
     """
     Sum sparse data values by their index positions (JIT-compiled).
@@ -478,9 +486,6 @@ def _sum_on_indices(
     :param squared: If True, sum squared values instead of raw values
     :return: Array of sums, one per unique index from 0 to max_index-1
     """
-
-    if dtype is None:
-        dtype = data.dtype
 
     output = np.zeros(
         max_index,
@@ -504,8 +509,8 @@ def _sum_on_indices(
 def _sum_on_indptr(
     data,
     indptr,
-    squared=False,
-    dtype=None
+    dtype,
+    squared=False
 ):
     """
     Sum sparse data values within index pointer ranges (JIT-compiled).
@@ -519,9 +524,6 @@ def _sum_on_indptr(
     :param squared: If True, sum squared values instead of raw values
     :return: Array of sums, one per segment (length = indptr.shape[0] - 1)
     """
-
-    if dtype is None:
-        dtype = data.dtype
 
     output = np.zeros(
         indptr.shape[0] - 1,

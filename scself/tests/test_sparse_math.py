@@ -204,13 +204,21 @@ class TestMCVMeanErrorSparse(unittest.TestCase):
 class TestSparseSum(unittest.TestCase):
     """Test sparse summation operations."""
 
+    dtype = np.dtype('float64')
+    decimal = 7
+
+    cast = np.dtype('float32')
+    catch = np.dtype('float64')
+
     def setUp(self):
         rng = np.random.default_rng(42)
         self.data = rng.random((50, 30))
         self.data[self.data < 0.4] = 0
 
+        self.data = self.data.astype(self.dtype)
         self.csr = sps.csr_matrix(self.data)
         self.csc = sps.csc_matrix(self.data)
+
         return super().setUp()
 
     def test_sum_all_csr(self):
@@ -218,42 +226,42 @@ class TestSparseSum(unittest.TestCase):
         result = sparse_sum(self.csr, axis=None)
         expected = np.sum(self.data)
 
-        npt.assert_almost_equal(result, expected)
+        npt.assert_almost_equal(result, expected, decimal=self.decimal)
 
     def test_sum_all_csc(self):
         """Test summing all elements in CSC matrix."""
         result = sparse_sum(self.csc, axis=None)
         expected = np.sum(self.data)
 
-        npt.assert_almost_equal(result, expected)
+        npt.assert_almost_equal(result, expected, decimal=self.decimal)
 
     def test_sum_axis0_csr(self):
         """Test column sums for CSR matrix."""
         result = sparse_sum(self.csr, axis=0)
         expected = np.sum(self.data, axis=0)
 
-        npt.assert_array_almost_equal(result, expected)
+        npt.assert_array_almost_equal(result, expected, decimal=self.decimal)
 
     def test_sum_axis0_csc(self):
         """Test column sums for CSC matrix."""
         result = sparse_sum(self.csc, axis=0)
         expected = np.sum(self.data, axis=0)
 
-        npt.assert_array_almost_equal(result, expected)
+        npt.assert_array_almost_equal(result, expected, decimal=self.decimal)
 
     def test_sum_axis1_csr(self):
         """Test row sums for CSR matrix."""
         result = sparse_sum(self.csr, axis=1)
         expected = np.sum(self.data, axis=1)
 
-        npt.assert_array_almost_equal(result, expected)
+        npt.assert_array_almost_equal(result, expected, decimal=self.decimal)
 
     def test_sum_axis1_csc(self):
         """Test row sums for CSC matrix."""
         result = sparse_sum(self.csc, axis=1)
         expected = np.sum(self.data, axis=1)
 
-        npt.assert_array_almost_equal(result, expected)
+        npt.assert_array_almost_equal(result, expected, decimal=self.decimal)
 
     def test_sum_dense_raises_error(self):
         """Test that dense arrays raise ValueError."""
@@ -281,7 +289,40 @@ class TestSparseSum(unittest.TestCase):
         single_row = sps.csr_matrix(self.data[0:1, :])
         result = sparse_sum(single_row, axis=1)
 
-        npt.assert_array_almost_equal(result, [np.sum(self.data[0, :])])
+        npt.assert_array_almost_equal(result, [np.sum(self.data[0, :])], decimal=self.decimal)
+
+    def test_sum_cast_csr(self):
+        self.csr.data = self.csr.data * 10
+        self.csr.data = self.csr.data.astype(self.cast)
+
+        result = sparse_sum(self.csr, axis=0, dtype=self.catch)
+        expected = np.sum(self.csr.toarray(), axis=0)
+
+        npt.assert_array_almost_equal(result, expected, decimal=4)
+
+    def test_sum_cast_csc(self):
+        self.csc.data = self.csc.data * 10
+        self.csc.data = self.csc.data.astype(self.cast)
+
+        result = sparse_sum(self.csc, axis=0, dtype=self.catch)
+        expected = np.sum(self.csc.toarray(), axis=0)
+
+        npt.assert_array_almost_equal(result, expected, decimal=4)
+
+
+class TestSparseSumFloat32(TestSparseSum):
+
+    decimal = 4
+    dtype = np.dtype('float32')
+
+
+class TestSparseSumInt8(TestSparseSum):
+
+    decimal = 4
+    dtype = np.dtype('int8')
+
+    cast = np.dtype('int8')
+    catch = np.dtype('int32')
 
 
 class TestSparseNormalizeColumns(unittest.TestCase):
